@@ -378,8 +378,10 @@ window.AxonShop = (function () {
         // a small ring of reused elements (no element created / destroyed per kill)
         if (!pop.els) { pop.els = []; pop.i = 0; for (let k = 0; k < 8; k++) { const d = document.createElement('div'); d.className = 'coin-pop'; d.style.display = 'none'; api.stage.appendChild(d); pop.els.push(d); } }
         const el = pop.els[pop.i = (pop.i + 1) % pop.els.length];
-        el.style.display = 'none'; void el.offsetWidth;          // restart its animation
-        el.textContent = text; el.style.left = ((v.x + 1) / 2 * api.View.W) + 'px'; el.style.top = ((1 - v.y) / 2 * api.View.H) + 'px'; el.style.display = '';
+        // restart its animation without forcing a layout of the whole page (the old offsetWidth trick did, on every kill)
+        el.textContent = text; el.style.left = ((v.x + 1) / 2 * api.View.W) + 'px'; el.style.top = ((1 - v.y) / 2 * api.View.H) + 'px';
+        if (el.style.display === 'none') el.style.display = '';
+        else if (el.getAnimations) el.getAnimations().forEach(a => { a.cancel(); a.play(); });
         clearTimeout(el._t); el._t = setTimeout(() => { el.style.display = 'none'; }, 1000);
     }
     function add(n, worldPos, label) {

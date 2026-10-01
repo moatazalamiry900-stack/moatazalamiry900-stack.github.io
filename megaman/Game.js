@@ -271,6 +271,7 @@ async function initCyberGame() {
     }
     const flashGeo = new THREE.SphereGeometry(1, 14, 10);
     function spawnFlash(pos, color, size = 1, life = 0.15) {
+        if (isCoarse) size *= 0.75;   // phones: additive flashes fill a lot of screen right where the GPU is busiest
         const m = fxPool.get(flashGeo, color);
         m.position.copy(pos); m.scale.setScalar(size * 0.4);
         addFx({ mesh: m, life, max: life, update(f) { const k = 1 - f.life / f.max; f.mesh.scale.setScalar(size * (0.4 + k)); f.mesh.material.opacity = 1 - k; } });
@@ -1104,7 +1105,8 @@ async function initCyberGame() {
     function applyQuality(resOnly) {
         PERF.mark(resOnly ? 'resolution change' : 'quality change');
         const c = QS.CFG[quality], hi = c.bloom;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, c.pr) * dynRes.scale);
+        const pr = isCoarse && quality === 'HI' ? Math.min(c.pr, 1.5) : c.pr;   // phones: HI at 1.5× — ~25 % fewer pixels, headroom for explosions
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pr) * dynRes.scale);
         dirLight.castShadow = c.shadow;
         // phones: a tighter sun frustum (±17 m around the player instead of ±28) with a 512 map keeps about the same
         // sharpness while the shadow pass draws roughly a third of the geometry — cheap enough to run every frame
@@ -1325,7 +1327,7 @@ async function initCyberGame() {
         lastVs = vs; fpsMeter.vsync(vs); now = vs;
 
         const tA = performance.now(); renderer.info.reset();
-        if ((state === 'play' || state === 'hub' || state === 'outside') && lastF && dynRes.frame(now - lastF, 1000 / Math.min(limiter.cap, window.AxonPerf.Display.hz), frameTime)) { applyQuality(true); fpsMeter.res = dynRes.scale; }
+        if ((state === 'play' || state === 'hub' || state === 'outside') && lastF && dynRes.frame(now - lastF, 1000 / Math.min(limiter.cap, window.AxonPerf.Display.hz), frameTime, PERF.sinceCombat() > 2500)) { applyQuality(true); fpsMeter.res = dynRes.scale; }
         lastF = now;
 
         if (hitStop > 0) { hitStop -= frameTime; frameTime *= 0.08; }

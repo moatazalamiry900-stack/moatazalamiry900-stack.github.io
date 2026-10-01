@@ -310,7 +310,11 @@ window.AxonPerf = (function () {
     const bl = (k, ...a) => { const L = BL[(window.AxonI18n && window.AxonI18n.lang) || 'en'] || BL.en, v = L[k] !== undefined ? L[k] : BL.en[k]; return typeof v === 'function' ? v(...a) : v; };
     // events of the current frame (kill, shot, save…), so the report can tell what the slow frames had in common
     let _marks = [], _marking = false;
-    function mark(label) { if (_marking) _marks.push(label); }
+    // last moment of combat (a shot, a hit, a kill): costly changes such as a new render resolution wait for a calm moment
+    const COMBAT = { shoot: 1, kill: 1, hurt: 1, 'saber hit': 1, 'enemy shot': 1 };
+    let lastCombat = -1e9;
+    function mark(label) { if (COMBAT[label]) lastCombat = performance.now(); if (_marking) _marks.push(label); }
+    const sinceCombat = () => performance.now() - lastCombat;
     function gpuName(renderer) {
         try { const gl = renderer.getContext(), x = gl.getExtension('WEBGL_debug_renderer_info'); return String((x ? gl.getParameter(x.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) || '?'); } catch (e) { return '?'; }
     }
@@ -549,7 +553,9 @@ window.AxonPerf = (function () {
     // (frames just over budget) and keeps a margin, instead of waiting for +12 % (= many frames already missed).
     function DynRes(min = 0.7, down = 1.12) {
         this.scale = 1; let acc = 0, n = 0, good = 0, cool = 0, wait = 2, slow = 0, before = 0, block = 0;
-        this.frame = (ms, target, dt) => {                 // → true when the scale changed
+        // calm = false during a fight: measuring goes on, but the change itself (a render-target reallocation, ~50–100 ms
+        // hitch on phones) waits for a quiet moment, so it never lands in the middle of a shootout
+        this.frame = (ms, target, dt, calm = true) => {     // → true when the scale changed
             cool -= dt; block -= dt; if (ms > 200) return false;       // tab switch / hitch outliers don't count
             acc += ms; if (++n < 24) return false;
             const avg = acc / n; acc = 0; n = 0;
@@ -559,15 +565,16 @@ window.AxonPerf = (function () {
             // proof: a step down that did not make frames at least 5 % faster means the frame time is not set by
             // pixels (vsync pacing, WebView, CPU) — undo it and stop trimming for a minute instead of blurring for nothing
             if (before) {
+                if (!calm) return false;
                 const b = before; before = 0;
                 if (avg > b * 0.95) { this.scale = Math.min(1, Math.round(this.scale * 10 + 1) / 10); block = 60; cool = 3; return true; }
             }
             if (avg > target * down) {
-                good = 0; if (this.scale <= min || block > 0 || ++slow < 2) return false;
+                good = 0; if (this.scale <= min || block > 0 || ++slow < 2 || !calm) return false;
                 slow = 0; before = avg; this.scale = Math.max(min, Math.round(this.scale * 10 - 1) / 10); cool = 3; wait = Math.min(wait * 1.6, 30); return true;
             }
             slow = 0;
-            if (avg < target * Math.min(1.04, down - 0.01) && this.scale < 1 && (good += avg * 24 / 1000) > wait) {
+            if (avg < target * Math.min(1.04, down - 0.01) && this.scale < 1 && (good += avg * 24 / 1000) > wait && calm) {
                 this.scale = Math.min(1, Math.round(this.scale * 10 + 1) / 10); good = 0; cool = 3; return true;
             }
             return false;
@@ -728,5 +735,5 @@ window.AxonPerf = (function () {
         dstNodes.forEach(o => { if (o.isSkinnedMesh) o.bind(new THREE.Skeleton(o.skeleton.bones.map(b => dstNodes[ix.get(b)]), o.skeleton.boneInverses), o.bindMatrix); });
     }
 
-    return { mark, mergeGeometries, mergeStatic, mergeRig, skinRig, rebindClone, Impostors, WorldBatcher, SparkPool, segHit, near, physics, FpsMeter, Display, FrameLimiter, FxPool, DynRes, Quality };
+    return { mark, sinceCombat, mergeGeometries, mergeStatic, mergeRig, skinRig, rebindClone, Impostors, WorldBatcher, SparkPool, segHit, near, physics, FpsMeter, Display, FrameLimiter, FxPool, DynRes, Quality };
 })();
