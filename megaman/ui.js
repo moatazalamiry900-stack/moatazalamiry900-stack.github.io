@@ -209,7 +209,7 @@ window.AxonUI = (function () {
         if (kind === 'settings') {
             const row = (id, key) => `<div class="st-row"><span><b>${T(key)}</b></span><button type="button" class="st-val" data-set="${id}"></button></div>`;
             return `<h2>${T('settings')}${sub('settings')}</h2>
-              ${row('lang', 'set_lang')}${row('music', 'set_music')}${row('fx', 'set_fx')}${row('cap', 'set_cap')}${row('fps', 'set_fps')}${row('orient', 'set_orient')}${row('ctl', 'set_ctl')}${row('bench', 'set_bench')}`;
+              ${row('lang', 'set_lang')}${row('music', 'set_music')}${row('fx', 'set_fx')}${row('bloom', 'set_bloom')}${row('shadow', 'set_shadow')}${row('res', 'set_res')}${row('cap', 'set_cap')}${row('fps', 'set_fps')}${row('orient', 'set_orient')}${row('ctl', 'set_ctl')}${row('bench', 'set_bench')}`;
         }
         if (kind === 'ctl') return Ctl.html();
         if (kind === 'help') {
@@ -228,6 +228,7 @@ window.AxonUI = (function () {
             lang: () => I.NAMES[I.lang],
             fps: () => api.fpsOn() ? T('on') : T('off'),
             cap: () => api.capLabel(),
+            bloom: () => api.fxOpt('bloom'), shadow: () => api.fxOpt('shadow'), res: () => api.fxOpt('res'),
             music: () => ($('btn-music') && $('btn-music').classList.contains('off')) ? T('off') : T('on'),
             fx: () => { const l = $('fx-label'); if (!l) return 'HI'; const tier = T('q_' + (l.dataset.tier || 'HI'));
                 return l.dataset.mode === 'AUTO' ? T('q_auto') + ' · ' + tier : tier; },
@@ -250,6 +251,7 @@ window.AxonUI = (function () {
                 if (s && s.dataset.set === 'bench') { closePanel(); if (paused) setPaused(false); if (api.bench) api.bench(30); return; }   // 30 s performance capture while you play
                 if (s && s.dataset.set === 'lang') { I.next(); return; }
                 if (s && s.dataset.set === 'cap') { api.cycleCap(); syncSettings(); return; }
+                if (s && (s.dataset.set === 'bloom' || s.dataset.set === 'shadow' || s.dataset.set === 'res')) { api.cycleFxOpt(s.dataset.set); syncSettings(); return; }
                 if (s && s.dataset.set === 'fps') { api.toggleFps(); syncSettings(); return; }
                 if (s) {
                     const map = { music: 'btn-music', fx: 'btn-fx', orient: 'btn-orient' };

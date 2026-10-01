@@ -1099,15 +1099,22 @@ async function initCyberGame() {
     const autoTier = () => { const d = QS.detect(renderer, isCoarse), cap = store.get('fxCap', 'ULTRA');
         return QS.TIERS.indexOf(cap) >= 0 && QS.TIERS.indexOf(cap) < QS.TIERS.indexOf(d) ? cap : d; };
     let quality = fxMode === 'AUTO' ? autoTier() : fxMode;
-    const bloomOn = () => QS.CFG[quality].bloom;
+    // Player overrides on top of the tier (Settings → Glow / Shadows / Resolution): 'auto' follows the tier.
+    // Phones: the glow (bloom) is OFF unless the player turns it on — on an Adreno 725 it cost about 40 % of the 1 % lows
+    // (15 vs 25 FPS) for a softer look; shadows and resolution keep following the tier.
+    let fxBloom = store.get('fxBloom', 'auto'), fxShadow = store.get('fxShadow', 'auto'), fxRes = store.get('fxRes', 'auto');
+    const bloomOn = () => fxBloom === 'on' ? true : fxBloom === 'off' ? false : QS.CFG[quality].bloom && !isCoarse;
+    const shadowOn = () => fxShadow === 'on' ? true : fxShadow === 'off' ? false : QS.CFG[quality].shadow;
+    // a fixed resolution never changes during play (no render-target reallocation hitches); 'auto' = dynamic resolution
+    const resScale = () => fxRes === 'auto' ? dynRes.scale : +fxRes;
     const dynRes = new window.AxonPerf.DynRes(0.7, 1.12); let lastF = 0;
 
     function applyQuality(resOnly) {
         PERF.mark(resOnly ? 'resolution change' : 'quality change');
-        const c = QS.CFG[quality], hi = c.bloom;
+        const c = QS.CFG[quality], hi = bloomOn();
         const pr = isCoarse && quality === 'HI' ? Math.min(c.pr, 1.5) : c.pr;   // phones: HI at 1.5× — ~25 % fewer pixels, headroom for explosions
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pr) * dynRes.scale);
-        dirLight.castShadow = c.shadow;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pr) * resScale());
+        dirLight.castShadow = shadowOn();
         // phones: a tighter sun frustum (±17 m around the player instead of ±28) with a 512 map keeps about the same
         // sharpness while the shadow pass draws roughly a third of the geometry — cheap enough to run every frame
         const lite = isCoarse && quality !== 'HI' && quality !== 'ULTRA', smap = lite ? 512 : c.smap, ext = lite ? 17 : 28, sc = dirLight.shadow.camera;
@@ -1128,7 +1135,7 @@ async function initCyberGame() {
         const lb = $('fx-label'); lb.dataset.mode = fxMode; lb.dataset.tier = quality;
         lb.textContent = (fxMode === 'AUTO' ? 'A·' : '') + (quality === 'ULTRA' ? 'U' : quality);
         onResize(View.W, View.H);
-        fpsMeter.tag = `${fxMode === 'AUTO' ? 'AUTO→' : ''}${quality}${hi && bloomAvailable ? ' · bloom ON' : ' · bloom off'}${c.shadow ? ' · shadow ' + c.smap : ' · no shadow'} · px ${renderer.getPixelRatio().toFixed(2)}`;   // shown under the FPS line
+        fpsMeter.tag = `${fxMode === 'AUTO' ? 'AUTO→' : ''}${quality}${hi && bloomAvailable ? ' · bloom ON' : ' · bloom off'}${shadowOn() ? ' · shadow ' + c.smap : ' · no shadow'} · px ${renderer.getPixelRatio().toFixed(2)}`;   // shown under the FPS line
         if (!resOnly) prewarmShaders();
     }
     const fpsMeter = new window.AxonPerf.FpsMeter(stage, renderer);
@@ -1288,6 +1295,22 @@ async function initCyberGame() {
         pause: on => { if (on) { resumeTo = state; state = 'pause'; } else if (state === 'pause') { state = resumeTo; Input.flush(); keysDown.clear(); } },
         setBody: t => { if (t !== player.bodyType) player.setBody(t); }, bodyType: () => player.bodyType,
         capLabel: () => { const hz = window.AxonPerf.Display.hz; return limiter.cap > hz + 2 ? `${limiter.cap} FPS · ${T('screen_hz', hz)}` : `${limiter.cap} FPS`; },
+        // graphics options: glow / shadows / resolution (Settings)
+        fxOpt: k => {
+            const v = k === 'bloom' ? fxBloom : k === 'shadow' ? fxShadow : fxRes;
+            if (v === 'auto') {
+                const eff = k === 'bloom' ? bloomOn() : k === 'shadow' ? shadowOn() : null;
+                return T('q_auto') + (eff === null ? '' : ' · ' + T(eff ? 'on' : 'off'));
+            }
+            return k === 'res' ? Math.round(+v * 100) + '%' : T(v);
+        },
+        cycleFxOpt: k => {
+            const order = k === 'res' ? ['auto', '1', '0.85', '0.7'] : ['auto', 'on', 'off'];
+            const cur = k === 'bloom' ? fxBloom : k === 'shadow' ? fxShadow : fxRes, next = order[(order.indexOf(cur) + 1) % order.length];
+            if (k === 'bloom') fxBloom = next; else if (k === 'shadow') fxShadow = next; else fxRes = next;
+            store.set(k === 'bloom' ? 'fxBloom' : k === 'shadow' ? 'fxShadow' : 'fxRes', next);
+            applyQuality(k === 'res');
+        },
         cycleCap: () => { const o = capOptions(); limiter.cap = o[(o.indexOf(limiter.cap) + 1) % o.length] || 60; store.set('fpsCap', String(limiter.cap)); },
         calm: () => {   // tips wait for a quiet moment
             if (state !== 'play') return true;
@@ -1296,7 +1319,7 @@ async function initCyberGame() {
         },
         canFreeze: () => (state === 'play' || state === 'hub' || state === 'outside' || state === 'countdown') && !player.dead,
         freeze: on => { if (on) { if (state !== 'tips') resumeTo = state; state = 'tips'; } else if (state === 'tips') { state = resumeTo; Input.flush(); keysDown.clear(); } },
-        bench: secs => fpsMeter.bench(secs, () => ({ tier: (fxMode === 'AUTO' ? 'AUTO→' : '') + quality + (bloomOn() ? ' · bloom' : '') + (QS.CFG[quality].shadow ? ' · shadow' : ''), cap: limiter.cap })),
+        bench: secs => fpsMeter.bench(secs, () => ({ tier: (fxMode === 'AUTO' ? 'AUTO→' : '') + quality + (bloomOn() ? ' · bloom' : '') + (shadowOn() ? ' · shadow' : '') + (fxRes !== 'auto' ? ' · res ' + Math.round(fxRes * 100) + '%' : ''), cap: limiter.cap })),
         fpsOn: () => fpsOn, toggleFps: () => { fpsOn = !fpsOn; store.set('fps', fpsOn ? '1' : '0'); fpsMeter.show(fpsOn); }
     });
 
@@ -1327,7 +1350,7 @@ async function initCyberGame() {
         lastVs = vs; fpsMeter.vsync(vs); now = vs;
 
         const tA = performance.now(); renderer.info.reset();
-        if ((state === 'play' || state === 'hub' || state === 'outside') && lastF && dynRes.frame(now - lastF, 1000 / Math.min(limiter.cap, window.AxonPerf.Display.hz), frameTime, PERF.sinceCombat() > 2500)) { applyQuality(true); fpsMeter.res = dynRes.scale; }
+        if (fxRes === 'auto' && (state === 'play' || state === 'hub' || state === 'outside') && lastF && dynRes.frame(now - lastF, 1000 / Math.min(limiter.cap, window.AxonPerf.Display.hz), frameTime, PERF.sinceCombat() > 2500)) { applyQuality(true); fpsMeter.res = dynRes.scale; }
         lastF = now;
 
         if (hitStop > 0) { hitStop -= frameTime; frameTime *= 0.08; }

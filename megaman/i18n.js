@@ -43,7 +43,7 @@ window.AxonI18n = (function () {
             owned: 'Owned', full: 'FULL', max: 'MAX',
             lost_run: n => `Mission failed: the ${n} CR collected on this run and the sectors cleared since deploying are lost.`, over_sub: (k, t) => `You took down ${k} of ${t} targets. Use DASH to dodge drone fire.`, retry: 'Try again',
             clear_sub: b => `You climbed the whole facility and destroyed ${b}.`, clear_good: 'Flawless run.', clear_hard: 'A narrow escape.', play_again: 'Play again',
-            need_hp: 'Health is full', need_en: 'Energy is full', tap: 'TAP', set_fps: 'FPS counter', set_cap: 'Frame rate', screen_hz: h => `screen ${h} Hz`, hz_limited: h => `The browser/app runs this screen at ${h} Hz`,
+            need_hp: 'Health is full', need_en: 'Energy is full', tap: 'TAP', set_fps: 'FPS counter', set_cap: 'Frame rate', set_bloom: 'Glow (bloom)', set_shadow: 'Shadows', set_res: 'Resolution', screen_hz: h => `screen ${h} Hz`, hz_limited: h => `The browser/app runs this screen at ${h} Hz`,
             b_saber: "SABER", b_buster: "BUSTER", b_jump: "JUMP", b_dash: "DASH", b_lock: "LOCK", hits: "HITS", targets: "TARGETS", guardian: "GUARDIAN", final: "FINAL", zone_clear: "ZONE CLEAR", clear_tag: "CLEAR", armory: "ARMORY", paused: "PAUSED", frame_a: "MK-VII · AGILE FRAME", frame_m: "MK-IX · VANGUARD FRAME", frame_f: "MK-VIII · LYNX FRAME", presents: "MTZ GAMES PRESENTS", over_eyebrow: "SIGNAL LOST", over_h: ["SYSTEM", "DOWN"], clear_eyebrow: "GUARDIAN DOWN", clear_h: ["SECTOR", "CLEAR"],
             coop: 'Co-op', set_ctl: 'Controls size', ctl_title: 'Controls size', ctl_hint: 'Drag a slider: the controls resize live behind this panel.', ctl_all: 'All controls', ctl_joy: 'Joystick', ctl_slots: 'Quick slots', ctl_top: 'Top buttons', ctl_reset: 'Reset', ctl_back: 'Back', ctl_custom: 'custom',
             stage: (n, t) => `STAGE ${n}/${t}`
@@ -82,7 +82,7 @@ window.AxonI18n = (function () {
             owned: 'لديك', full: 'ممتلئ', max: 'الحد',
             lost_run: n => `فشلت المهمة: ضاع ${n} رصيد جمعته في هذه الجولة، وكل القطاعات التي أنجزتها منذ الانطلاق.`, over_sub: (k, t) => `أسقطت ${k} من ${t} هدفاً. استخدم الـ DASH لتفادي طلقات الدرونز.`, retry: 'إعادة المحاولة',
             clear_sub: b => `صعدت المنشأة كلها وأسقطت ${b}.`, clear_good: 'أداء نظيف.', clear_hard: 'نجوت بصعوبة.', play_again: 'العب مجدداً',
-            need_hp: 'الصحة ممتلئة', need_en: 'الطاقة ممتلئة', tap: 'اضغط', set_fps: 'عدّاد الإطارات FPS', set_cap: 'معدّل الإطارات', screen_hz: h => `الشاشة ${h} هيرتز`, hz_limited: h => `المتصفح/التطبيق يشغّل الشاشة على ${h} هيرتز`,
+            need_hp: 'الصحة ممتلئة', need_en: 'الطاقة ممتلئة', tap: 'اضغط', set_fps: 'عدّاد الإطارات FPS', set_cap: 'معدّل الإطارات', set_bloom: 'التوهج (Bloom)', set_shadow: 'الظلال', set_res: 'دقة الرسم', screen_hz: h => `الشاشة ${h} هيرتز`, hz_limited: h => `المتصفح/التطبيق يشغّل الشاشة على ${h} هيرتز`,
             b_saber: "سيف", b_buster: "مدفع", b_jump: "قفز", b_dash: "اندفاع", b_lock: "قفل", hits: "ضربة", targets: "الأهداف", guardian: "الحارس", final: "المواجهة الأخيرة", zone_clear: "تم تنظيف المنطقة", clear_tag: "تنظيف", armory: "المتجر", paused: "إيقاف مؤقت", frame_a: "MK-VII · هيكل رشيق", frame_m: "MK-IX · هيكل الطليعة", frame_f: "MK-VIII · هيكل الوشق", presents: "MTZ GAMES تقدّم", over_eyebrow: "انقطعت الإشارة", over_h: ["تعطّل", "النظام"], clear_eyebrow: "سقط الحارس", clear_h: ["القطاع", "محرَّر"],
             coop: 'لعب جماعي', set_ctl: 'حجم الأزرار', ctl_title: 'حجم الأزرار', ctl_hint: 'حرّك الشريط: الأزرار يتغيّر حجمها مباشرة خلف هذه النافذة.', ctl_all: 'كل الأزرار', ctl_joy: 'عصا التحكم', ctl_slots: 'الخانات السريعة', ctl_top: 'الأزرار العلوية', ctl_reset: 'إعادة الضبط', ctl_back: 'رجوع', ctl_custom: 'مخصص',
             stage: (n, t) => `الطابق ${n}/${t}`
@@ -121,7 +121,7 @@ window.AxonI18n = (function () {
             owned: 'Tienes', full: 'LLENO', max: 'MÁX',
             lost_run: n => `Misión fallida: se pierden los ${n} CR de esta incursión y los sectores despejados desde el despliegue.`, over_sub: (k, t) => `Derribaste ${k} de ${t} objetivos. Usa DASH para esquivar a los drones.`, retry: 'Reintentar',
             clear_sub: b => `Subiste toda la instalación y destruiste a ${b}.`, clear_good: 'Impecable.', clear_hard: 'Por los pelos.', play_again: 'Jugar de nuevo',
-            need_hp: 'Salud al máximo', need_en: 'Energía al máximo', tap: 'TOCA', set_fps: 'Contador de FPS', set_cap: 'Fotogramas por segundo', screen_hz: h => `pantalla ${h} Hz`, hz_limited: h => `El navegador/app usa la pantalla a ${h} Hz`,
+            need_hp: 'Salud al máximo', need_en: 'Energía al máximo', tap: 'TOCA', set_fps: 'Contador de FPS', set_cap: 'Fotogramas por segundo', set_bloom: 'Resplandor (bloom)', set_shadow: 'Sombras', set_res: 'Resolución', screen_hz: h => `pantalla ${h} Hz`, hz_limited: h => `El navegador/app usa la pantalla a ${h} Hz`,
             b_saber: "SABLE", b_buster: "CAÑÓN", b_jump: "SALTO", b_dash: "IMPULSO", b_lock: "FIJAR", hits: "GOLPES", targets: "OBJETIVOS", guardian: "GUARDIÁN", final: "FINAL", zone_clear: "ZONA DESPEJADA", clear_tag: "LIMPIO", armory: "ARMERÍA", paused: "PAUSA", frame_a: "MK-VII · CHASIS ÁGIL", frame_m: "MK-IX · CHASIS VANGUARDIA", frame_f: "MK-VIII · CHASIS LINCE", presents: "MTZ GAMES PRESENTA", over_eyebrow: "SEÑAL PERDIDA", over_h: ["SISTEMA", "CAÍDO"], clear_eyebrow: "GUARDIÁN DERROTADO", clear_h: ["SECTOR", "DESPEJADO"],
             coop: 'Cooperativo', set_ctl: 'Tamaño de controles', ctl_title: 'Tamaño de controles', ctl_hint: 'Arrastra un control: los botones cambian de tamaño en directo detrás de este panel.', ctl_all: 'Todos los controles', ctl_joy: 'Joystick', ctl_slots: 'Ranuras rápidas', ctl_top: 'Botones superiores', ctl_reset: 'Restablecer', ctl_back: 'Atrás', ctl_custom: 'personalizado',
             stage: (n, t) => `PISO ${n}/${t}`
@@ -160,7 +160,7 @@ window.AxonI18n = (function () {
             owned: '持有', full: '已满', max: '满级',
             lost_run: n => `任务失败：本次出击获得的 ${n} CR 以及出击后清理的区域全部丢失。`, over_sub: (k, t) => `击倒了 ${t} 个目标中的 ${k} 个。用冲刺躲避无人机的攻击。`, retry: '再试一次',
             clear_sub: b => `你登上了整个设施并摧毁了 ${b}。`, clear_good: '完美通关。', clear_hard: '险胜。', play_again: '再玩一次',
-            need_hp: '生命已满', need_en: '能量已满', tap: '点击', set_fps: '帧率显示', set_cap: '帧率上限', screen_hz: h => `屏幕 ${h} Hz`, hz_limited: h => `浏览器/应用将屏幕限制为 ${h} Hz`,
+            need_hp: '生命已满', need_en: '能量已满', tap: '点击', set_fps: '帧率显示', set_cap: '帧率上限', set_bloom: '泛光', set_shadow: '阴影', set_res: '分辨率', screen_hz: h => `屏幕 ${h} Hz`, hz_limited: h => `浏览器/应用将屏幕限制为 ${h} Hz`,
             b_saber: "光剑", b_buster: "炮击", b_jump: "跳跃", b_dash: "冲刺", b_lock: "锁定", hits: "连击", targets: "目标", guardian: "守卫", final: "最终战", zone_clear: "区域已清除", clear_tag: "清除", armory: "军械库", paused: "暂停", frame_a: "MK-VII · 敏捷型机体", frame_m: "MK-IX · 先锋型机体", frame_f: "MK-VIII · 山猫型机体", presents: "MTZ GAMES 出品", over_eyebrow: "信号丢失", over_h: ["系统", "崩溃"], clear_eyebrow: "守卫已击败", clear_h: ["区域", "已攻克"],
             coop: '联机合作', set_ctl: '按键大小', ctl_title: '按键大小', ctl_hint: '拖动滑块：按键会在此面板后方实时改变大小。', ctl_all: '全部按键', ctl_joy: '摇杆', ctl_slots: '快捷栏', ctl_top: '顶部按钮', ctl_reset: '重置', ctl_back: '返回', ctl_custom: '自定义',
             stage: (n, t) => `第 ${n}/${t} 层`
@@ -199,7 +199,7 @@ window.AxonI18n = (function () {
             owned: '所持', full: '満タン', max: '最大',
             lost_run: n => `ミッション失敗：今回の出撃で得た ${n} CR と、出撃後に制圧したセクターは失われた。`, over_sub: (k, t) => `${t} 体中 ${k} 体を撃破。ダッシュでドローンの攻撃を避けよう。`, retry: 'リトライ',
             clear_sub: b => `施設を登りきり、${b} を撃破した。`, clear_good: '完璧なクリア。', clear_hard: 'ギリギリの勝利。', play_again: 'もう一度',
-            need_hp: 'HPは満タン', need_en: 'エネルギーは満タン', tap: 'タップ', set_fps: 'FPS表示', set_cap: 'フレームレート', screen_hz: h => `画面 ${h} Hz`, hz_limited: h => `ブラウザ/アプリが画面を ${h} Hz に制限しています`,
+            need_hp: 'HPは満タン', need_en: 'エネルギーは満タン', tap: 'タップ', set_fps: 'FPS表示', set_cap: 'フレームレート', set_bloom: 'ブルーム', set_shadow: '影', set_res: '解像度', screen_hz: h => `画面 ${h} Hz`, hz_limited: h => `ブラウザ/アプリが画面を ${h} Hz に制限しています`,
             b_saber: "セイバー", b_buster: "バスター", b_jump: "ジャンプ", b_dash: "ダッシュ", b_lock: "ロック", hits: "ヒット", targets: "ターゲット", guardian: "ガーディアン", final: "ファイナル", zone_clear: "エリア制圧", clear_tag: "制圧", armory: "武器庫", paused: "ポーズ", frame_a: "MK-VII · 機動型フレーム", frame_m: "MK-IX · 先鋒型フレーム", frame_f: "MK-VIII · リンクスフレーム", presents: "MTZ GAMES 提供", over_eyebrow: "信号途絶", over_h: ["システム", "ダウン"], clear_eyebrow: "ガーディアン撃破", clear_h: ["セクター", "制圧"],
             coop: '協力プレイ', set_ctl: 'ボタンのサイズ', ctl_title: 'ボタンのサイズ', ctl_hint: 'スライダーを動かすと、このパネルの後ろでボタンの大きさがすぐに変わります。', ctl_all: 'すべてのボタン', ctl_joy: 'スティック', ctl_slots: 'クイックスロット', ctl_top: '上部ボタン', ctl_reset: 'リセット', ctl_back: '戻る', ctl_custom: 'カスタム',
             stage: (n, t) => `ステージ ${n}/${t}`
