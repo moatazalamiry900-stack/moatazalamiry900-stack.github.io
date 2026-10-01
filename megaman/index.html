@@ -1,6 +1,38 @@
 <!DOCTYPE html>
 <html lang="ar">
-<head><script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/megaman/__mc_sw.js',{scope:'/megaman/'}).catch(function(){});(function(){function w(){if(navigator.wakeLock&&!document.hidden)navigator.wakeLock.request('screen').catch(function(){});}document.addEventListener('visibilitychange',w);w();})();</script>
+<head><script>(function mcPageBoot(C) {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(C.sw, { scope: C.scope }).catch(function () { });
+      if (!navigator.serviceWorker.controller) {
+        var k = 'mc-sw-reload';
+        try {
+          if (!sessionStorage.getItem(k)) navigator.serviceWorker.addEventListener('controllerchange', function () { sessionStorage.setItem(k, '1'); location.reload(); });
+        } catch (e) { }
+      }
+    }
+    if (C.keepAwake) {
+      var w = function () { if (navigator.wakeLock && !document.hidden) navigator.wakeLock.request('screen').catch(function () { }); };
+      document.addEventListener('visibilitychange', w); w();
+    }
+    var box = null, n = 0;
+    function show(t) {
+      if (n > 8) return; n++;
+      if (!box) {
+        box = document.createElement('div');
+        box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;max-height:45%;overflow:auto;background:rgba(40,0,8,.94);color:#ffb3b3;font:12px/1.45 monospace;padding:10px 12px;border:1px solid #ff4d6d;border-radius:8px;white-space:pre-wrap';
+        box.onclick = function () { box.remove(); box = null; };
+        (document.body || document.documentElement).appendChild(box);
+        var h = document.createElement('div'); h.textContent = 'Game error (tap to hide)'; h.style.cssText = 'color:#fff;font-weight:bold;margin-bottom:6px'; box.appendChild(h);
+      }
+      var l = document.createElement('div'); l.textContent = t; l.style.marginBottom = '6px'; box.appendChild(l);
+    }
+    window.addEventListener('error', function (e) {
+      var t = e.target;
+      if (t && t !== window && (t.src || t.href)) { show('Failed to load: ' + (t.src || t.href)); return; }
+      show((e.message || 'Error') + (e.filename ? '  (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : ''));
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) { show('Unhandled promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+  })({"sw":"/megaman/__mc_sw.js","scope":"/megaman/","keepAwake":true});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Axon Breach</title>
