@@ -773,7 +773,7 @@ async function initCyberGame() {
             (this.ghosts || []).forEach(g => { scene.remove(g.root); g.mat.dispose(); });
             const src = []; this.mesh.traverse(o => src.push(o));
             this.ghosts = []; this.ghostI = 0;
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0, n = isCoarse ? 3 : 7; i < n; i++) {   // each afterimage is a full copy of the hero: phones keep 3
                 const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
                 mat.skinning = true;
                 const root = this.mesh.clone(true), dst = []; root.traverse(o => { dst.push(o); if (o.isMesh) { o.material = mat; o.castShadow = false; } });
@@ -1297,6 +1297,7 @@ async function initCyberGame() {
         capLabel: () => { const hz = window.AxonPerf.Display.hz; return limiter.cap > hz + 2 ? `${limiter.cap} FPS · ${T('screen_hz', hz)}` : `${limiter.cap} FPS`; },
         // graphics options: glow / shadows / resolution (Settings)
         fxOpt: k => {
+            if (k === 'hero') { const h = store.get('heroDetail', 'auto'); return h === 'auto' ? T('q_auto') + ' · ' + T(isCoarse ? 'q_LO' : 'q_HI') : T(h === 'high' ? 'q_HI' : 'q_LO'); }
             const v = k === 'bloom' ? fxBloom : k === 'shadow' ? fxShadow : fxRes;
             if (v === 'auto') {
                 const eff = k === 'bloom' ? bloomOn() : k === 'shadow' ? shadowOn() : null;
@@ -1305,6 +1306,10 @@ async function initCyberGame() {
             return k === 'res' ? Math.round(+v * 100) + '%' : T(v);
         },
         cycleFxOpt: k => {
+            if (k === 'hero') {   // rebuild the hero with the new segment counts (same body, skin and look)
+                const o = ['auto', 'high', 'low']; store.set('heroDetail', o[(o.indexOf(store.get('heroDetail', 'auto')) + 1) % o.length]);
+                player.setBody(player.bodyType); prewarmShaders(); return;
+            }
             const order = k === 'res' ? ['auto', '1', '0.85', '0.7'] : ['auto', 'on', 'off'];
             const cur = k === 'bloom' ? fxBloom : k === 'shadow' ? fxShadow : fxRes, next = order[(order.indexOf(cur) + 1) % order.length];
             if (k === 'bloom') fxBloom = next; else if (k === 'shadow') fxShadow = next; else fxRes = next;

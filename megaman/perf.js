@@ -735,5 +735,29 @@ window.AxonPerf = (function () {
         dstNodes.forEach(o => { if (o.isSkinnedMesh) o.bind(new THREE.Skeleton(o.skeleton.bones.map(b => dstNodes[ix.get(b)]), o.skeleton.boneInverses), o.bindMatrix); });
     }
 
-    return { mark, sinceCombat, mergeGeometries, mergeStatic, mergeRig, skinRig, rebindClone, Impostors, WorldBatcher, SparkPool, segHit, near, physics, FpsMeter, Display, FrameLimiter, FxPool, DynRes, Quality };
+    // ---------- geometry detail: build a model with fewer segments (phones) ----------
+    // withDetail(k, fn): while fn runs, the round primitives (sphere, torus, cylinder, cone, lathe, tube, circle)
+    // are created with k × their segment counts (never below a sane minimum, never above what was asked).
+    // Halving both directions of a sphere or torus = a quarter of the triangles, same silhouette at phone size.
+    const SEG_ARGS = {   // constructor argument index → minimum
+        SphereGeometry: { 1: 8, 2: 6 }, TorusGeometry: { 2: 4, 3: 10 }, CylinderGeometry: { 3: 6 }, ConeGeometry: { 2: 6 },
+        LatheGeometry: { 1: 8 }, TubeGeometry: { 1: 6, 3: 4 }, CircleGeometry: { 1: 8 }
+    };
+    function withDetail(k, fn) {
+        if (!(k < 1)) return fn();
+        const saved = {};
+        Object.keys(SEG_ARGS).forEach(name => {
+            const Orig = THREE[name], spec = SEG_ARGS[name]; if (!Orig) return;
+            saved[name] = Orig;
+            THREE[name] = class extends Orig {
+                constructor(...a) {
+                    Object.keys(spec).forEach(i => { if (typeof a[i] === 'number') a[i] = Math.min(a[i], Math.max(spec[i], Math.round(a[i] * k))); });
+                    super(...a);
+                }
+            };
+        });
+        try { return fn(); } finally { Object.keys(saved).forEach(name => { THREE[name] = saved[name]; }); }
+    }
+
+    return { mark, sinceCombat, withDetail, mergeGeometries, mergeStatic, mergeRig, skinRig, rebindClone, Impostors, WorldBatcher, SparkPool, segHit, near, physics, FpsMeter, Display, FrameLimiter, FxPool, DynRes, Quality };
 })();

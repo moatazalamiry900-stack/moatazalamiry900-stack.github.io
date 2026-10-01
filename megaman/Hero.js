@@ -68,15 +68,29 @@ window.AxonHero = (function () {
     const _cc = new THREE.Color();
     const SKIN_KEYS = Object.keys(SKINS);
 
+    // ---------- model detail ----------
+    // The hero is sculpted for close-ups (~106 000 triangles). On a phone he covers a small part of the screen and is
+    // drawn twice a frame (scene + shadow), plus up to 7 dash afterimages — far more than the rest of the world together.
+    // DK scales every segment count while the body is built: 0.5 ≈ a quarter of the triangles, same shapes.
+    // Settings → Character detail: auto (phones 0.5, desktop 1) · high · low.
+    let DK = 1;
+    function detailK() {
+        let v = 'auto'; try { v = localStorage.getItem('axon.heroDetail') || 'auto'; } catch (e) { }
+        if (v === 'high') return 1;
+        if (v === 'low') return 0.5;
+        return window.matchMedia && window.matchMedia('(pointer: coarse)').matches ? 0.5 : 1;
+    }
+    const dseg = (n, min = 1) => Math.min(n, Math.max(min, Math.round(n * DK)));
+
     // Bevelled box (rounded edges → faceted, sculpted armor plates)
     const rbCache = new Map();
     function RB(w, h, d, r = 0.04) {
-        const key = [w, h, d, r].join('|');
+        const key = [w, h, d, r, DK].join('|');
         if (rbCache.has(key)) return rbCache.get(key);
         r = Math.min(r, w / 2 - 0.002, h / 2 - 0.002, d / 2 - 0.002);
         const hw = w / 2 - r, hh = h / 2 - r, s = new THREE.Shape();
         s.moveTo(-hw, -hh); s.lineTo(hw, -hh); s.lineTo(hw, hh); s.lineTo(-hw, hh); s.lineTo(-hw, -hh);
-        const g = new THREE.ExtrudeGeometry(s, { depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 2, curveSegments: 1 });
+        const g = new THREE.ExtrudeGeometry(s, { depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: dseg(2), curveSegments: 1 });
         g.center();
         rbCache.set(key, g);
         return g;
@@ -86,7 +100,7 @@ window.AxonHero = (function () {
     // Rounded "pillow" block: every vertex is pushed onto a rounded surface (true fillets, seamless normals),
     // then optionally tapered (narrower top/bottom) and bulged (curved front), like cast or pressed armour.
     function pillow(w, h, d, r = 0.05, o = {}) {
-        const seg = o.seg || 6;
+        const seg = dseg(o.seg || 6, 3);
         const g = new THREE.BoxGeometry(w, h, d, seg, seg, seg);
         const pos = g.attributes.position, nor = g.attributes.normal, v = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
         const hx = w / 2 - r, hy = h / 2 - r, hz = d / 2 - r;
@@ -107,13 +121,13 @@ window.AxonHero = (function () {
         return g;
     }
     // Turned part from a profile [[radius, y], …] (bottom → top): limbs, collars, nozzles, barrels
-    const lathe = (pts, seg = 20) => new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[0], p[1])), seg);
+    const lathe = (pts, seg = 20) => new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[0], p[1])), dseg(seg, 10));
     // Plate cut from a smooth outline [[x, y], …], extruded with soft rounded edges
     function plate(pts, depth, bevel = 0.02, sideways = false) {
         const sh = new THREE.Shape();
         sh.moveTo(pts[0][0], pts[0][1]);
         sh.splineThru(pts.slice(1).concat([pts[0]]).map(p => new THREE.Vector2(p[0], p[1])));
-        const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 24 });
+        const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: dseg(3), curveSegments: dseg(24, 10) });
         g.translate(0, 0, -depth / 2);
         if (sideways) g.rotateY(-Math.PI / 2);   // outline drawn as (forward, up), extruded across the body's width
         g.computeVertexNormals();
@@ -145,6 +159,10 @@ window.AxonHero = (function () {
     }
 
     function build(P, type = 'a') {
+        DK = detailK();
+        return window.AxonPerf && window.AxonPerf.withDetail ? window.AxonPerf.withDetail(DK, () => buildBody(P, type)) : buildBody(P, type);
+    }
+    function buildBody(P, type = 'a') {
             P._feet = null; P._stepSide = undefined; P._sp = null; P._pv = null;   // new body: fresh feet cache, joint springs, momentum            // new body = new feet: drop the cached ones of the old body
             const MALE = type === 'm', FEMALE = type === 'f';   // 'a' AXON (male, agile) · 'm' KAEL (male, strong) · 'f' LYRA (female)
             P.bodyType = MALE ? 'm' : FEMALE ? 'f' : 'a';
