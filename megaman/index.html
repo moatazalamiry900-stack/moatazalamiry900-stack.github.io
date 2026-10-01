@@ -28,7 +28,7 @@
     }
     window.addEventListener('error', function (e) {
       var t = e.target;
-      if (t && t !== window && (t.src || t.href)) { show('Failed to load: ' + (t.src || t.href)); return; }
+      if (t && t !== window && (t.src || t.href)) { if (t.tagName === 'SCRIPT') show('Failed to load: ' + (t.src || t.href)); return; }
       show((e.message || 'Error') + (e.filename ? '  (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : ''));
     }, true);
     window.addEventListener('unhandledrejection', function (e) { show('Unhandled promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
