@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.minassa.player.g9vhcc1ud71dpeec",
+      "sha256_cert_fingerprints": [
+        "F1:3B:E7:D3:CD:A5:52:3A:2E:EC:04:5D:BF:AE:9C:ED:B9:1C:6F:19:BA:3D:A7:16:18:5B:D9:4F:8F:A8:DA:4B"
+      ]
+    }
+  }
+]

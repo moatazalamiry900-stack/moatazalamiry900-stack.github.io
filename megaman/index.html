@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head><script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/megaman/__mc_sw.js',{scope:'/megaman/'}).catch(function(){});(function(){function w(){if(navigator.wakeLock&&!document.hidden)navigator.wakeLock.request('screen').catch(function(){});}document.addEventListener('visibilitychange',w);w();})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Axon Breach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
+<style>
+  [hidden]{display:none!important}
+  :root{
+    --bg:#040a14; --ink:#e6eef6; --dim:#8a9bb0;
+    --amber:#ffa826; --cyan:#39d7ff; --magenta:#ff2a6d; --gold:#ffe066;
+    --panel:rgba(6,16,30,.74); --line:rgba(57,215,255,.35);
+    --font:'Chakra Petch','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif;
+    color-scheme:dark;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);overflow:hidden}
+  body{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+
+  #stage{position:fixed;left:0;top:0;width:100vw;height:100vh;transform-origin:0 0;overflow:hidden;
+    background:var(--bg);font-family:var(--font);color:var(--ink)}
+  #stage > canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;z-index:0}
+
+  #vignette{position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 55%,rgba(2,6,14,.65) 100%)}
+  #damage-flash{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .18s;
+    background:radial-gradient(ellipse at center,transparent 35%,rgba(255,30,70,.55) 100%)}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;z-index:5;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+    padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 14px max(16px,env(safe-area-inset-left));box-sizing:border-box}
+  .gauge{display:grid;gap:6px;width:min(270px,44%)}
+  .gauge-id{display:flex;align-items:baseline;gap:8px;font-weight:700;font-size:14px;letter-spacing:.2em}
+  .gauge-id small{color:var(--amber);font-weight:500;font-size:10px;letter-spacing:.18em}
+  .bar-row{display:grid;grid-template-columns:22px 1fr 30px;align-items:center;gap:6px;font-size:10px;letter-spacing:.14em;color:var(--dim)}
+  .bar{position:relative;height:12px;background:rgba(10,24,40,.85);outline:1px solid var(--line);
+    clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+  .bar i{position:absolute;inset:0;display:block;transform-origin:left center;transition:transform .12s linear}
+  .bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(4,10,20,.9) 9px 11px)}
+  .bar.hp i{background:linear-gradient(90deg,#ff2a6d,#ff7a3d)}
+  .bar.en i{background:linear-gradient(90deg,#1b8cff,#39d7ff)}
+  .bar.ch{height:5px;outline:none;background:rgba(255,168,38,.14)}
+  .bar.ch::after{display:none}
+  .bar.ch i{background:var(--amber);transform:scaleX(0);transition:none}
+  .bar-row .num{font:700 11px/1 var(--font);color:var(--ink);text-align:end;font-variant-numeric:tabular-nums;letter-spacing:0}
+  .bar.en.low i{background:linear-gradient(90deg,#ff5a3d,#ffb23d)}
+  .bar.en.dry{animation:enDry .35s}
+  @keyframes enDry{0%,100%{outline-color:var(--line)}30%,70%{outline-color:#ff3a5a;background:rgba(255,40,70,.35)}}
+  .bar.ch .tick{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:rgba(255,255,255,.5)}
+  .bar.ch.mid i{background:#7fe9ff;box-shadow:0 0 8px rgba(127,233,255,.7)}
+  #stage.low-hp #damage-flash{animation:lowHp 1.1s ease-in-out infinite}
+  @keyframes lowHp{0%,100%{opacity:0}50%{opacity:.55}}
+  #stage.low-hp .bar.hp i{animation:hpBlink .55s steps(2) infinite}
+  @keyframes hpBlink{50%{filter:brightness(1.8)}}
+  .bar.ch.full i{background:#fff4d6;box-shadow:0 0 10px var(--amber)}
+
+  .map-wrap{position:relative;width:132px;margin-top:6px}
+  #minimap{display:block;width:132px;height:132px}
+  #stage-label{position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);font-size:10px;letter-spacing:.2em;color:var(--amber);
+    background:var(--panel);padding:2px 8px;white-space:nowrap}
+  #stage.is-portrait .map-wrap,#stage.is-portrait #minimap{width:104px;height:104px}
+  #boss-bar{position:absolute;left:50%;top:calc(max(14px,env(safe-area-inset-top)) + 50px);transform:translateX(-50%);width:min(460px,46%);display:grid;gap:4px;text-align:center}
+  #stage.is-portrait #boss-bar{top:auto;bottom:210px;width:78%}
+  .bb-name{font-weight:700;font-size:13px;letter-spacing:.3em;color:#ff5c8a;text-shadow:0 0 10px rgba(255,42,109,.6)}
+  .bb-name small{font-size:9px;letter-spacing:.3em;color:var(--dim)}
+  .bb-track{position:relative;height:12px;background:rgba(40,6,18,.85);outline:1px solid rgba(255,42,109,.6);
+    clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+  .bb-track i{position:absolute;inset:0;display:block;transform-origin:left center;transition:transform .15s linear;background:linear-gradient(90deg,#ff2a6d,#ff8a3d)}
+  #boss-bar.p2 .bb-track i{background:linear-gradient(90deg,#ff1f3d,#ffcf3d)}
+  .bb-mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.55)}
+  #toast{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.9);font-weight:700;font-size:18px;letter-spacing:.25em;
+    color:#7dffb8;text-shadow:0 0 14px rgba(60,220,140,.7);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
+  #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  .hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+  .sys{display:flex;gap:8px;pointer-events:none;flex-wrap:wrap;justify-content:flex-end}
+  .sys > *,.zoom > *{pointer-events:auto}   /* only the chips take touches; the gaps pass through to the camera */
+  .chip{font:600 12px/1 var(--font);padding:9px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    display:flex;gap:7px;align-items:center;cursor:pointer;letter-spacing:.05em;touch-action:manipulation;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+  .chip svg{width:15px;height:15px;stroke:var(--cyan);fill:none;stroke-width:2}
+  .chip:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .chip:active{background:rgba(57,215,255,.25)}
+  #btn-music .mute{display:none;stroke:var(--magenta)}
+  #btn-music.off .mute{display:inline}
+  #btn-music.off svg{opacity:.7}
+  .zoom{display:flex;gap:4px;pointer-events:none}
+  .zoom .chip{padding:8px 10px}
+  .swatch{display:block;width:13px;height:13px;border:1px solid rgba(255,255,255,.5);transform:rotate(45deg)}
+  #combo{text-align:right;line-height:1;transition:opacity .3s}
+  #combo b{display:block;font-size:42px;font-style:italic;color:var(--amber);text-shadow:0 0 14px rgba(255,168,38,.55);
+    font-variant-numeric:tabular-nums;transition:transform .1s}
+  #combo span{font-size:11px;letter-spacing:.35em;color:var(--cyan)}
+  #combo.idle{opacity:.3}
+  #targets{font-size:11px;letter-spacing:.22em;color:var(--dim)}
+  #targets b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+  /* ---------- touch controls ---------- */
+  #camera-zone{position:absolute;right:0;top:0;width:100%;height:100%;z-index:1;touch-action:none}   /* everywhere the stick and buttons are not */
+  #touch-ui{position:absolute;inset:0;z-index:10;pointer-events:none}
+  #joystick-zone{position:absolute;left:0;bottom:0;width:42%;height:100%;pointer-events:auto;touch-action:none}
+  /* التعديل هنا: تم تغيير الشفافية الافتراضية opacity إلى 0 */
+  #joy-base{position:absolute;left:max(24px,env(safe-area-inset-left));bottom:28px;width:136px;height:136px;border-radius:50%;
+    pointer-events:none;border:1.5px solid rgba(57,215,255,.35);opacity:0;transition:opacity .15s;
+    background:radial-gradient(circle,rgba(57,215,255,.1),rgba(57,215,255,.02) 70%)}
+  #joy-base.live{opacity:1}
+  #joystick-handle{position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;pointer-events:none;
+    transform:translate(-50%,-50%);background:radial-gradient(circle at 40% 35%,#c9f6ff,#39d7ff 45%,#0d5f8a);
+    box-shadow:0 0 18px rgba(57,215,255,.65)}
+  #pad{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:24px;pointer-events:none;display:grid;gap:10px;
+    grid-template-columns:repeat(3,72px);grid-template-rows:repeat(2,72px);
+    grid-template-areas:"lock dash shoot" ". atk jump"}
+  /* combat buttons: armoured octagon plates — metal rim tinted by the action colour, dark glass face, glowing icon + label */
+  .btn{--c:var(--cyan);--s:64px;pointer-events:auto;position:relative;width:var(--s);height:var(--s);padding:0;border:0;cursor:pointer;touch-action:none;color:var(--c);
+    background:linear-gradient(160deg,#e9f1f8 0%,#7d8a99 38%,#2a313b 62%,#9aa7b5 100%);
+    clip-path:polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%);transition:transform .08s}
+  .btn::before{content:"";position:absolute;inset:3px;clip-path:inherit;
+    background:linear-gradient(160deg,var(--c),color-mix(in srgb,var(--c) 35%,#000) 70%)}
+  .btn .face{position:absolute;inset:6px;clip-path:polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%);
+    display:grid;place-items:center;align-content:center;gap:1px;
+    background:radial-gradient(circle at 50% 30%,rgba(40,70,100,.95),rgba(6,12,22,.96) 70%);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.12),inset 0 -6px 12px rgba(0,0,0,.6)}
+  .btn .face::after{content:"";position:absolute;left:12%;right:12%;top:6%;height:34%;border-radius:50%;
+    background:linear-gradient(rgba(255,255,255,.16),transparent);pointer-events:none}
+  .btn svg{width:calc(var(--s) * .44);height:calc(var(--s) * .44);fill:currentColor;filter:drop-shadow(0 0 4px var(--c))}
+  #btn-lock svg{width:calc(var(--s) * .56);height:calc(var(--s) * .56)}
+  .btn .lbl{font:700 8px/1 var(--font);letter-spacing:.12em;color:#dfe9f3;opacity:.85}
+  html.rtl-text .btn .lbl{letter-spacing:0;font-size:10px;font-family:'IBM Plex Sans Arabic',var(--font)}
+  html:lang(zh) .btn .lbl,html:lang(ja) .btn .lbl{letter-spacing:0;font-size:9px}
+  html.rtl-text #combo span,html.rtl-text #targets,html.rtl-text #stage-label{letter-spacing:0;font-size:12px}
+  .btn.on{transform:scale(.9)}
+  .btn.on .face{background:radial-gradient(circle at 50% 35%,#fff,var(--c) 55%,color-mix(in srgb,var(--c) 45%,#000))}
+  .btn.on svg{fill:#061220;filter:none} .btn.on .lbl{color:#061220}
+  .btn.locked::before{background:linear-gradient(160deg,#fff6c8,var(--gold))}
+  .btn.locked .face{background:radial-gradient(circle at 50% 30%,rgba(120,100,30,.9),rgba(20,16,4,.95) 70%)}
+  #btn-lock{--c:var(--gold);--s:52px;grid-area:lock;align-self:end;justify-self:end}
+  #btn-lock .lbl{display:none}
+  #btn-dash{grid-area:dash}
+  #btn-shoot{--c:var(--amber);--s:72px;grid-area:shoot}
+  #btn-attack{--c:var(--magenta);--s:72px;grid-area:atk}
+  #btn-jump{--c:#5cf0a0;grid-area:jump}
+  #btn-shoot,#btn-attack{align-self:center;justify-self:center}
+  #stage.is-portrait #joystick-zone{width:48%;height:55%}
+  #stage.is-portrait #joy-base{width:116px;height:116px;left:18px;bottom:36px}
+  #stage.is-portrait #pad{grid-template-columns:repeat(3,62px);grid-template-rows:repeat(2,62px);gap:6px;right:14px;bottom:32px}
+  #stage.is-portrait .btn{--s:56px}
+  #stage.is-portrait #btn-shoot,#stage.is-portrait #btn-attack{--s:62px}
+  #stage.is-portrait #btn-lock{--s:46px}
+  #stage.is-portrait #combo b{font-size:32px}
+
+  #keys{display:none;position:absolute;left:16px;bottom:16px;z-index:6;pointer-events:none;font-size:11px;letter-spacing:.08em;
+    color:var(--dim);background:var(--panel);padding:10px 12px;border-left:2px solid var(--amber);line-height:1.8}
+  #keys kbd{font:700 10px var(--font);color:var(--ink);border:1px solid var(--line);padding:1px 5px;margin-inline-end:4px}
+
+  @media (hover:hover) and (pointer:fine){
+    #touch-ui{display:none}
+    #camera-zone{width:100%;cursor:grab}
+    #camera-zone:active{cursor:grabbing}
+    #keys{display:block}
+  }
+
+  /* ---------- boot: Mtz Games splash + loading ---------- */
+  #boot{position:fixed;inset:0;z-index:100;background:#03070e;display:grid;place-items:center;font-family:var(--font);color:var(--ink);transition:opacity .5s}
+  #boot.gone{opacity:0;pointer-events:none}
+  #boot-splash,#boot-load{grid-area:1/1;display:grid;justify-items:center;gap:14px;transition:opacity .5s,transform .5s}
+  #boot-splash.gone{opacity:0;transform:scale(1.04);pointer-events:none;transition-duration:.7s}
+  .sp-glow{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,rgba(57,215,255,.16),transparent 55%);animation:spGlow 7s ease-out both}
+  .mtz-mark{width:120px;height:120px;overflow:visible}
+  .mtz-mark .hx,.mtz-mark .mz{fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .mtz-mark .hx{stroke:#39d7ff;stroke-width:3;stroke-dasharray:340;stroke-dashoffset:340;animation:spDraw 1.8s .5s cubic-bezier(.6,0,.2,1) forwards;filter:drop-shadow(0 0 8px rgba(57,215,255,.7))}
+  .mtz-mark .mz{stroke:#ffa826;stroke-width:6;stroke-dasharray:200;stroke-dashoffset:200;animation:spDraw 1.4s 1.9s cubic-bezier(.6,0,.2,1) forwards;filter:drop-shadow(0 0 10px rgba(255,168,38,.7))}
+  .sp-word{display:flex;align-items:baseline;gap:12px;opacity:0;animation:spIn .9s 3.1s ease-out forwards}
+  .sp-word b{font-size:38px;letter-spacing:.3em;font-weight:700}
+  .sp-word span{font-size:20px;letter-spacing:.55em;color:var(--cyan)}
+  .sp-tag{font-size:11px;letter-spacing:.6em;color:var(--dim);text-transform:uppercase;opacity:0;animation:spIn .8s 3.9s ease-out forwards}
+  @keyframes spDraw{to{stroke-dashoffset:0}}
+  @keyframes spIn{from{opacity:0;transform:translateY(8px);letter-spacing:.8em}to{opacity:1;transform:none}}
+  @keyframes spGlow{from{opacity:0}35%{opacity:1}to{opacity:.7}}
+  #boot-splash .mtz-mark{animation:spZoom 7s cubic-bezier(.2,.6,.3,1) both}
+  @keyframes spZoom{from{transform:scale(.9)}to{transform:scale(1.05)}}
+  #boot-load{opacity:0;width:min(420px,80vw)}
+  #boot-load.show{opacity:1}
+  #boot-load.show.late{transition-delay:.38s}
+  #boot-load.show.late .ld-title{animation-delay:.38s}
+  .ld-title{font-size:30px;font-weight:700;letter-spacing:.14em}
+  .ld-title em{font-style:italic;color:var(--amber)}
+  .ld-bar{position:relative;width:100%;height:6px;background:rgba(57,215,255,.12);overflow:hidden;clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%)}
+  .ld-bar i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);background:linear-gradient(90deg,var(--cyan),var(--amber))}
+  .ld-bar::after{content:'';position:absolute;inset:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:ldSheen 1.1s linear infinite}
+  @keyframes ldSheen{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+  #boot-load.show .ld-title{animation:ldTitle .8s cubic-bezier(.2,.8,.25,1) both}
+  @keyframes ldTitle{from{opacity:0;letter-spacing:.4em}to{opacity:1}}
+  .ld-row{width:100%;display:flex;justify-content:space-between;font-size:12px;color:var(--dim);letter-spacing:.1em}
+  #load-pct{color:var(--amber);font-variant-numeric:tabular-nums}
+  .ld-tip{font-size:12px;color:var(--dim);text-align:center;margin-top:8px}
+  .ld-by{position:fixed;bottom:18px;font-size:11px;letter-spacing:.4em;color:rgba(138,155,176,.6)}
+
+  /* ---------- menu / pause / panels ---------- */
+  #stage.in-menu #hud,#stage.in-menu #touch-ui,#stage.in-menu #keys{display:none}
+  .ui-layer{position:absolute;inset:0;z-index:25;opacity:0;pointer-events:none;transition:opacity .3s;font-family:var(--font)}
+  .ui-layer.show{opacity:1;pointer-events:auto}
+  /* a hidden overlay must cost nothing: at opacity 0 it is still composited over the game every frame (and the
+     blurred ones re-blur the moving 3-D view behind them). Once faded out it leaves the render tree. */
+  .ui-layer:not(.show),#mp-lobby:not(.show){visibility:hidden;transition:opacity .3s,visibility 0s .3s}
+  #damage-flash{visibility:hidden} #stage.low-hp #damage-flash,#damage-flash[style*="opacity: 1"]{visibility:visible}
+  #menu{display:flex;align-items:stretch;background:linear-gradient(90deg,rgba(3,8,16,.86) 0,rgba(3,8,16,.5) 30%,rgba(3,8,16,0) 54%)}
+  #stage.is-portrait #menu{align-items:flex-end;background:linear-gradient(0deg,rgba(3,8,16,.94) 0,rgba(3,8,16,.62) 40%,rgba(3,8,16,0) 64%)}
+  .mm-side{width:min(360px,46%);display:flex;flex-direction:column;justify-content:center;gap:18px;box-sizing:border-box;
+    padding:max(18px,env(safe-area-inset-top)) 18px 16px max(22px,env(safe-area-inset-left));transform:translateX(-16px);transition:transform .4s}
+  #menu.show .mm-side{transform:none}
+  #stage.is-portrait .mm-side{width:100%;padding:16px 18px 22px;gap:12px}
+  .mm-brand{display:grid;gap:4px}
+  .mm-kicker{font-size:10px;letter-spacing:.45em;color:var(--cyan)}
+  .mm-brand h1{margin:0;font-size:clamp(30px,7vmin,54px);line-height:1;letter-spacing:.08em;text-shadow:0 0 26px rgba(57,215,255,.35)}
+  .mm-brand h1 em{color:var(--amber)}
+  .mm-sub{font-size:13px;color:var(--dim)}
+  .mm-nav{display:grid;gap:8px}
+  .mm-btn{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;font:inherit;color:var(--ink);text-align:start;cursor:pointer;
+    background:rgba(255,255,255,.04);border:1px solid rgba(57,215,255,.18);touch-action:manipulation;transition:background .15s,border-color .15s,transform .15s;
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+  .mm-btn svg{width:20px;height:20px;flex:none;fill:none;stroke:var(--cyan);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .mm-btn span{display:grid;gap:1px}
+  .mm-btn b{font-size:15px;font-weight:600}
+  .mm-btn small{font-size:9px;letter-spacing:.3em;color:var(--dim)}
+  .mm-btn:hover,.mm-btn:focus-visible{background:rgba(57,215,255,.1);border-color:rgba(57,215,255,.5);transform:translateX(3px);outline:none}
+  .mm-btn.primary{background:var(--amber);border-color:var(--amber);color:#1a0d00}
+  .mm-btn.primary svg{stroke:#1a0d00;fill:#1a0d00}
+  .mm-btn.primary small{color:rgba(26,13,0,.65)}
+  .mm-btn.primary:hover,.mm-btn.primary:focus-visible{background:#ffbb4d}
+  .mm-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mm-pick[hidden]{display:none}
+  .mm-foot{font-size:10px;letter-spacing:.2em;color:rgba(138,155,176,.7)}
+  #stage.is-portrait .mm-nav{grid-template-columns:1fr 1fr}
+  #stage.is-portrait .mm-nav .primary,#stage.is-portrait .mm-pick{grid-column:1/-1}
+  #pause{display:grid;place-items:center;background:rgba(3,8,16,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .pz-card{width:min(340px,86%);display:grid;gap:16px;padding:20px;background:linear-gradient(160deg,rgba(20,40,64,.85),rgba(8,16,30,.92));
+    border:1px solid rgba(57,215,255,.28);clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);transform:scale(.97);transition:transform .25s}
+  #pause.show .pz-card{transform:none}
+  .pz-head{display:grid;gap:2px;text-align:center}
+  .pz-head b{font-size:24px;letter-spacing:.4em}
+  .pz-head span{font-size:12px;color:var(--dim)}
+  /* HUD on phones: the duplicate chips (colours, graphics, orientation) live in Settings, so they step aside
+     when space is tight; the gauge keeps a readable width */
+  #stage.is-portrait #btn-fx,#stage.is-portrait #btn-orient,
+  #stage.short #btn-fx,#stage.short #btn-orient{display:none}
+  #stage.is-portrait .gauge{width:min(230px,50%)}
+  #stage.is-portrait .gauge-id small{display:none}
+  #stage.is-portrait .chip{padding:7px 9px;font-size:11px}
+  #stage.is-portrait .sys{gap:6px}
+  #stage.is-portrait .hm-head small,#stage.is-portrait .hm-head .hm-prog{display:none}
+  /* Arabic text blocks read right-to-left (numbers and English names stay intact inside them) */
+  html.rtl-text #overlay .card,html.rtl-text .pn-card,html.rtl-text .hm-det p,html.rtl-text .hm-det .t,html.rtl-text .pz-head{direction:rtl}
+  .st-val,.hm-tile .s b{unicode-bidi:plaintext}
+  /* short landscape screens: everything fits without scrolling off the edge */
+  #stage.short .mm-side{width:min(470px,54%);justify-content:flex-start;gap:8px;overflow-y:auto;padding-top:max(10px,env(safe-area-inset-top));padding-bottom:10px}
+  #stage.short .mm-brand h1{font-size:28px}
+  #stage.short .mm-sub,#stage.short .mm-foot{display:none}
+  #stage.short .mm-nav{grid-template-columns:1fr 1fr;gap:6px}
+  #stage.short .mm-nav .primary,#stage.short .mm-pick{grid-column:1/-1}
+  #stage.short .mm-btn{padding:7px 12px;gap:10px}
+  #stage.short .mm-btn b{font-size:14px}
+  #stage.short .pick-btn{padding:6px}
+  #stage.short .pz-card{width:min(540px,92%);max-height:94%;overflow-y:auto;gap:10px;padding:14px 16px}
+  #stage.short .pz-head b{font-size:18px;letter-spacing:.3em}
+  #stage.short .pn-card{width:min(640px,94%);max-height:94%;padding:14px 16px;gap:8px}
+  #stage.short .pn-card{grid-template-columns:1fr 1fr;column-gap:26px}
+  #stage.short .pn-card > :not(.st-row){grid-column:1/-1}
+  #stage.short .st-row{padding:5px 0}
+  #stage.short .st-val{padding:6px 10px}
+  #stage.short .hp-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  #stage.short .hm-card{max-height:96%;padding:12px 14px;gap:8px}
+  #stage.short .hm-tile{min-height:62px;padding:6px 8px 6px 11px}
+  #stage.short .hm-tile .n{font-size:18px}
+  #stage.short .hm-det{padding:10px;gap:7px}
+  #stage.short .hm-det .art{height:44px}
+  #stage.short .hm-det h3{font-size:17px}
+  #ui-panel{z-index:28;display:grid;place-items:center;background:rgba(3,8,16,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .pn-card{position:relative;width:min(520px,90%);max-height:88%;overflow:auto;box-sizing:border-box;padding:20px;display:grid;gap:12px;
+    background:linear-gradient(160deg,rgba(20,40,64,.9),rgba(8,16,30,.95));border:1px solid rgba(57,215,255,.3);
+    clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}
+  .pn-card h2{margin:0;font-size:20px;display:flex;align-items:baseline;gap:10px}
+  .pn-card h2 small{font-size:10px;letter-spacing:.35em;color:var(--cyan)}
+  .pn-close{position:absolute;top:12px;inset-inline-end:12px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:var(--ink);font-size:18px;cursor:pointer}
+  .st-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .st-row span{display:grid;gap:1px}
+  .st-row small{font-size:9px;letter-spacing:.3em;color:var(--dim)}
+  .st-val{min-width:96px;padding:8px 12px;font:700 12px var(--font);letter-spacing:.1em;color:var(--amber);background:rgba(255,168,38,.1);border:1px solid rgba(255,168,38,.4);cursor:pointer}
+  .hp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+  .hp-grid div{display:grid;gap:3px;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+  .hp-grid b{font-size:13px;color:var(--amber);letter-spacing:.1em}
+  .hp-grid span{font-size:12px;color:#b7c6d6;line-height:1.5}
+  .hp-keys,.ab-dim{font-size:12px;color:var(--dim);margin:0}
+  .pn-card p{margin:0;line-height:1.7}
+  .ab-logo{display:grid;place-items:center}
+  .ab-logo .mtz-mark{width:80px;height:80px}
+  .ab-logo .mtz-mark{animation:none}
+  .ab-logo .mtz-mark .hx,.ab-logo .mtz-mark .mz{stroke-dashoffset:0;animation:none}
+  @media (prefers-reduced-motion:reduce){.mtz-mark .hx,.mtz-mark .mz{animation:none;stroke-dashoffset:0}.sp-word,.sp-tag{animation:none;opacity:1}}
+
+  /* ---------- overlay ---------- */
+  #overlay{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:16px;box-sizing:border-box;
+    background:radial-gradient(ellipse at center,rgba(4,10,20,.72),rgba(4,10,20,.92))}
+  #overlay[hidden]{display:none}
+  .card{width:100%;max-width:460px;display:grid;gap:14px;text-align:center}
+  .eyebrow{font-size:11px;letter-spacing:.4em;color:var(--cyan)}
+  .card h1{margin:0;font-size:clamp(34px,9vmin,66px);line-height:1;letter-spacing:.1em;font-weight:700;text-wrap:balance;
+    text-shadow:0 0 26px rgba(57,215,255,.4)}
+  .card h1 em{font-style:italic;color:var(--amber)}
+  .card p{margin:0;color:var(--dim);font-size:14px;line-height:1.7}
+  .cta{justify-self:center;font:700 15px/1 var(--font);letter-spacing:.12em;color:#1a0d00;background:var(--amber);border:0;cursor:pointer;
+    padding:15px 30px;clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
+    box-shadow:0 0 24px rgba(255,168,38,.45)}
+  .cta:focus-visible{outline:2px solid #fff;outline-offset:3px}
+  #overlay.title{place-items:end center;background:linear-gradient(to top,rgba(4,10,20,.94) 38%,rgba(4,10,20,.25) 72%,rgba(4,10,20,0))}
+  #overlay.title .card{max-width:520px;gap:10px}
+  #overlay.title .legend{display:none}
+  #stage:not(.is-portrait) #overlay.title{place-items:center end;background:linear-gradient(to left,rgba(4,10,20,.94) 40%,rgba(4,10,20,.2) 70%,rgba(4,10,20,0))}
+  #stage:not(.is-portrait) #overlay.title .card{max-width:min(440px,46%);margin-inline-end:max(8px,env(safe-area-inset-right))}
+  #stage:not(.is-portrait) #overlay.title h1{font-size:clamp(28px,6.5vmin,52px)}
+  .pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pick-btn{font:600 12px/1.3 var(--font);color:var(--dim);background:var(--panel);border:1px solid var(--line);padding:10px 12px;cursor:pointer;
+    display:grid;gap:2px;text-align:center;touch-action:manipulation;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+  .pick-btn b{font-size:16px;letter-spacing:.2em;color:var(--ink)}
+  .pick-btn.on{border-color:var(--amber);background:rgba(255,168,38,.14);color:var(--ink)}
+  .pick-btn.on b{color:var(--amber)}
+  .pick-btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px 14px;font-size:12px;color:var(--dim);text-align:start}
+  .legend b{color:var(--ink);font-weight:600}
+  .only-fine{display:none}
+  @media (hover:hover) and (pointer:fine){ .only-fine{display:grid} .only-coarse{display:none} }
+  @media (prefers-reduced-motion:reduce){ .bar i,#combo b,#damage-flash{transition:none} }
+  
+  #stage.in-hub #targets,#stage.in-hub #combo,#stage.in-hub #boss-bar{display:none!important}
+  #stage.in-hub #btn-lock,#stage.in-hub #btn-shoot,#stage.in-hub #btn-attack{visibility:hidden}
+</style>
+
+</head>
+<body>
+<div id="boot">
+  <div id="boot-splash">
+    <div class="sp-glow"></div>
+    <svg viewBox="0 0 120 120" class="mtz-mark" aria-hidden="true">
+      <path class="hx" d="M60 6l47 27v54L60 114 13 87V33z"/>
+      <path class="mz" d="M32 82V40l18 24 10-14 10 14 18-24v42"/>
+    </svg>
+    <div class="sp-word"><b>MTZ</b><span>GAMES</span></div>
+    <div class="sp-tag">presents</div>
+  </div>
+  <div id="boot-load">
+    <div class="ld-title">AXON <em>BREACH</em></div>
+    <div class="ld-bar"><i id="load-fill"></i></div>
+    <div class="ld-row"><span id="load-label" data-i18n="load_loading">…</span><span id="load-pct">0%</span></div>
+    <div class="ld-tip" data-i18n="tip"></div>
+    <div class="ld-by">Mtz Games</div>
+  </div>
+</div>
+<script src="i18n.js"></script>
+<script src="ui.js"></script>
+<script>AxonI18n.fill(); AxonUI.bootStart();</script>
+<div id="stage" class="in-menu">
+  <div id="vignette"></div>
+  <div id="damage-flash"></div>
+
+  <div id="hud">
+    <div class="gauge">
+      <div class="gauge-id">AXON <small data-i18n="frame_a">MK-VII · AGILE FRAME</small></div>
+      <div class="bar-row">HP<div class="bar hp"><i id="hp-bar"></i></div><b class="num" id="hp-num">100</b></div>
+      <div class="bar-row">EN<div class="bar en"><i id="energy-bar"></i></div><b class="num" id="en-num">100</b></div>
+      <div class="bar-row">CH<div class="bar ch" id="charge-wrap"><i id="charge-bar"></i><span class="tick"></span></div><b class="num"></b></div>
+      <div class="map-wrap"><canvas id="minimap" width="132" height="132" aria-label="Minimap"></canvas><span id="stage-label">STAGE 1/6</span></div>
+    </div>
+    <div id="boss-bar" hidden><div class="bb-name">SENTINEL-Ω <small data-i18n="guardian">GUARDIAN</small></div><div class="bb-track"><i id="boss-fill"></i><span class="bb-mid"></span></div></div>
+    <div id="toast" role="status"></div>
+    <div class="hud-right">
+      <div class="sys">
+        <button class="chip" id="btn-pause" type="button" aria-label="Pause">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>
+        </button>
+        <button class="chip" id="btn-shop" type="button" aria-label="Armory — shop">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+          <span class="cr" id="credits">0</span>
+        </button>
+        <div class="zoom">
+          <button class="chip" id="btn-zoom-out" type="button" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M7.5 10.5h6"/></svg>
+          </button>
+          <button class="chip" id="btn-zoom-in" type="button" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M7.5 10.5h6M10.5 7.5v6"/></svg>
+          </button>
+        </div>
+        <button class="chip" id="btn-music" type="button" aria-label="Music" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/><path class="mute" d="M3 3l18 18"/></svg>
+        </button>
+        <button class="chip" id="btn-fx" type="button" aria-label="Graphics quality">FX <span id="fx-label">HI</span></button>
+        <button class="chip" id="btn-orient" type="button" aria-label="Screen orientation">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+          <span id="orient-label"></span>
+        </button>
+      </div>
+      <div id="combo" class="idle"><b id="combo-count">0</b><span data-i18n="hits">HITS</span></div>
+      <div id="targets"><span data-i18n="targets">TARGETS</span> <b id="target-count">0</b></div>
+    </div>
+  </div>
+
+  <div id="camera-zone"></div>
+
+  <div id="touch-ui">
+    <div id="joystick-zone"><div id="joy-base"><div id="joystick-handle"></div></div></div>
+    <div id="pad">
+      <button class="btn" id="btn-lock" data-action="Lock" type="button" aria-label="LOCK"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 1h2v6h-2zM11 17h2v6h-2zM1 11h6v2H1zM17 11h6v2h-6z"/><circle cx="12" cy="12" r="2"/></svg><span class="lbl">LOCK</span></span></button>
+      <button class="btn" id="btn-dash" data-action="Dash" type="button" aria-label="DASH"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l9 7-9 7 2.5-7z"/><path d="M2 8h6v2H2zM1 11h7v2H1zM2 14h6v2H2z" opacity=".75"/></svg><span class="lbl" data-i18n="b_dash">DASH</span></span></button>
+      <button class="btn" id="btn-shoot" data-action="Shoot" type="button" aria-label="BUSTER"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8.5h11.5a3.5 3.5 0 0 1 0 7H2z"/><circle cx="14" cy="12" r="1.8" fill="#061220"/><path d="M18 12l4-3v6z"/><path d="M19.5 5.5l2-2 1 1-2 2zM19.5 18.5l2 2 1-1-2-2z" opacity=".8"/></svg><span class="lbl" data-i18n="b_buster">BUSTER</span></span></button>
+      <button class="btn" id="btn-attack" data-action="Attack" type="button" aria-label="SABER"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 2l1.5 1.5-10.8 11.9-2.6-2.6z"/><path d="M5.2 11.6l1.4-1.4 7.2 7.2-1.4 1.4z"/><path d="M8.2 15.8l2 2-4.7 4.7-2-2z"/><circle cx="3.2" cy="20.8" r="1.6"/></svg><span class="lbl" data-i18n="b_saber">SABER</span></span></button>
+      <button class="btn" id="btn-jump" data-action="Jump" type="button" aria-label="JUMP"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 7h-4.5L12 7.5 9.5 10H5z"/><path d="M12 10l7 7h-4.5L12 14.5 9.5 17H5z" opacity=".75"/><path d="M5 20h14v2H5z" opacity=".6"/></svg><span class="lbl" data-i18n="b_jump">JUMP</span></span></button>
+    </div>
+  </div>
+
+  <div id="keys">
+    <div><kbd>WASD</kbd>move · <kbd>Space</kbd>jump · <kbd>Shift</kbd>dash</div>
+    <div><kbd>J</kbd>slash · <kbd>K</kbd>shot (hold = charge) · <kbd>L</kbd>lock · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>supplies</div>
+    <div>Drag the mouse to turn the camera · wheel or <kbd>+</kbd><kbd>−</kbd> to zoom</div>
+  </div>
+
+  <div id="overlay" hidden></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="perf.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="audio.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="shop.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="hero.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="hero-anim.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="level.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="hub.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="outside.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="explore.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="forge.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="biolab.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="retreat.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="shots.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="camera.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="surfaces.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="net.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="coop.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="game.js" onload="AxonUI.scriptLoaded()"></script>
+</body>
+</html>
