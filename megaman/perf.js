@@ -16,15 +16,15 @@ window.AxonPerf = (function () {
     function mergeGeometries(list) {           // list of { geo, matrix }
         let vCount = 0, iCount = 0;
         const hasUV = list.every(x => x.geo.attributes.uv);
-        const hasNormal = list.every(x => x.geo.attributes.normal);
+        const hasNormal = list.every(x => x.geo.attributes.normal), hasCol = list.every(x => x.geo.attributes.color);
         for (const { geo } of list) { vCount += geo.attributes.position.count; iCount += geo.index ? geo.index.count : geo.attributes.position.count; }
-        const pos = new Float32Array(vCount * 3), nor = hasNormal ? new Float32Array(vCount * 3) : null, uv = hasUV ? new Float32Array(vCount * 2) : null;
+        const pos = new Float32Array(vCount * 3), nor = hasNormal ? new Float32Array(vCount * 3) : null, uv = hasUV ? new Float32Array(vCount * 2) : null, colr = hasCol ? new Float32Array(vCount * 3) : null;
         const idx = vCount > 65535 ? new Uint32Array(iCount) : new Uint16Array(iCount);
         const v = new THREE.Vector3(), nm = new THREE.Matrix3();
         let vo = 0, io = 0;
         for (const { geo, matrix } of list) {
             const P = geo.attributes.position, N = geo.attributes.normal, U = geo.attributes.uv;
-            nm.getNormalMatrix(matrix);
+            nm.getNormalMatrix(matrix); if (colr) colr.set(geo.attributes.color.array, vo * 3);
             for (let i = 0; i < P.count; i++) {
                 v.fromBufferAttribute(P, i).applyMatrix4(matrix); pos.set([v.x, v.y, v.z], (vo + i) * 3);
                 if (nor) { v.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); nor.set([v.x, v.y, v.z], (vo + i) * 3); }
@@ -38,6 +38,7 @@ window.AxonPerf = (function () {
         g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
         if (nor) g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
         if (uv) g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        if (colr) g.setAttribute('color', new THREE.BufferAttribute(colr, 3));
         g.setIndex(new THREE.BufferAttribute(idx, 1));
         g.computeBoundingSphere(); g.computeBoundingBox();
         return g;
@@ -55,7 +56,9 @@ window.AxonPerf = (function () {
         this.addBlock = (kind, x, y, z, w, h, d, rx, ry, edgeColor) => {
             const g = new THREE.BoxGeometry(w, h, d);
             const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * rx, uv.getY(i) * ry);   // bake the texture repeat
-            bucket(boxes, kind + '|' + ck(z)).push({ geo: g, matrix: m4.clone().makeTranslation(x, y, z) });
+            const LK = window.AxonLook, th = LK ? LK.cur : -1, L = th >= 0 ? LK : null;   // only while level.js builds the facility: the HQ keeps its own look                       // look.js: each sector glows in its own colour, each block has a baked shade
+            if (L) { L.shade(g, kind, h); edgeColor = L.edge(kind, th); }
+            bucket(boxes, kind + '|' + ck(z) + '|' + th).push({ geo: g, matrix: m4.clone().makeTranslation(x, y, z) });
             const e = new THREE.EdgesGeometry(g).attributes.position.array, arr = bucket(edges, edgeColor + '|' + ck(z));
             for (let i = 0; i < e.length; i += 3) arr.push(e[i] + x, e[i + 1] + y, e[i + 2] + z);
         };
@@ -66,7 +69,7 @@ window.AxonPerf = (function () {
         this.finish = (materials) => {
             const out = [];
             for (const [key, list] of boxes) {
-                const kind = key.split('|')[0], mesh = new THREE.Mesh(mergeGeometries(list), materials[kind]);
+                const kind = key.split('|')[0], th = +key.split('|')[2], mesh = new THREE.Mesh(mergeGeometries(list), th >= 0 && window.AxonLook ? window.AxonLook.mat(materials[kind], kind, th) : materials[kind]);
                 mesh.receiveShadow = true; mesh.castShadow = kind !== 'floor';
                 scene.add(still(mesh)); out.push(mesh);
             }

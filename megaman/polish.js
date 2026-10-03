@@ -85,7 +85,7 @@ window.AxonPolish = (function () {
         const L = lang(), plan = window.AxonSectors ? window.AxonSectors.PLAN : [], k = z.kind === 'start' ? 0 : z.kind === 'corridor' ? 1 + (plan[z.stage - 1] || 0) : z.kind === 'arena' ? 5 : z.kind === 'gauntlet' ? 6 : 7;
         const col = z.kind === 'boss' ? '#ff2a45' : z.kind === 'gauntlet' ? '#ffa826' : '#39d7ff';
         ban.dir = L === 'ar' ? 'rtl' : 'ltr'; ban.style.setProperty('--bc', col);
-        ban.innerHTML = `<div class="f"><bdi>${T[L].floor} ${z.stage} / ${layout.stages}</bdi></div><div class="a">${T[L].area[k]}</div><div class="u"></div>`;
+        ban.innerHTML = `<div class="f"><bdi>${T[L].floor} ${z.stage} / ${layout.stages}</bdi></div><div class="a">${z.kind === 'corridor' && plan[z.stage - 1] === 4 && window.AxonChase ? window.AxonChase.name() : T[L].area[k]}</div><div class="u"></div>`;
         ban.classList.remove('on'); void ban.offsetWidth; ban.classList.add('on');
         tone('triangle', 660, 990, 0.12, 0.05); tone('triangle', 990, 990, 0.1, 0.035, { delay: 0.1 });
         clearTimeout(banT); banT = setTimeout(() => ban.classList.remove('on'), 3000);

@@ -17,9 +17,10 @@
 window.AxonSectors = (function () {
     const SFX = k => { const x = window.AxonSfx; if (x && x[k]) x[k](); };
     // kind of corridor on each of the nine floors (0 = the classic corridor with a staircase)
-    const PLAN = [0, 1, 2, 3, 0, 1, 2, 3, 0];
+    const PLAN = [0, 1, 2, 3, window.AxonChase ? 4 : 0, 1, 2, 3, 0];   // 4 = the surge run (chase.js)
 
     function build(kind, c) {
+        if (kind === 4) return window.AxonChase.build(c);
         const { api, B, S, z0, h, col, acc, i, m, traps, popper } = c;
         const aliens = window.AxonAliens && window.AxonAliens.get ? window.AxonAliens.get(api) : null;
         const E = (x, y, z, type) => new api.Enemy(m * x, y, z, type, i);

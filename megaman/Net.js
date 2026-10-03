@@ -1,5 +1,10 @@
 // =====================================================================
-//  AXON BREACH — co-op networking: rooms over a phone hotspot / shared Wi-Fi, up to 4 players.
+//  AXON BREACH — co-op networking: rooms of up to 4 players, ONLINE (anywhere, over the internet) or LOCAL
+//  (one hotspot / Wi-Fi). Both use the same room code, lobby and game protocol; the only difference is how the
+//  devices reach each other: LOCAL talks directly on the network, ONLINE may also go through a free relay (TURN)
+//  when two phones cannot reach each other directly — which is the usual case on mobile data.
+//  No server of our own: the free PeerJS cloud introduces the players, its free relays carry the traffic when
+//  needed, and a free Metered account (20 GB a month) can be added in the lobby as a stronger relay.
 //  WebRTC data channels (PeerJS). The host's phone is the hub of a star: every guest talks to the host,
 //  the host relays. Signalling (finding each other with a 4-letter room code) needs internet for a moment;
 //  the game traffic itself then flows device to device over the local network.
@@ -15,31 +20,31 @@ window.AxonNet = (function () {
     const hex = n => '#' + n.toString(16).padStart(6, '0');
     const I = () => window.AxonI18n;
     const L = {
-        ar: { title: 'لعب جماعي', sub: 'هوتسبوت · حتى 4 لاعبين', name: 'اسمك', host: 'استضافة غرفة', join: 'انضمام لغرفة', code: 'رمز الغرفة', connect: 'اتصال', start: 'ابدأ المهمة الجماعية', cancel: 'إلغاء', leave: 'مغادرة الغرفة', close: 'إغلاق',
+        ar: { mOnline: 'أونلاين', mLocal: 'محلي', subOn: 'عبر الإنترنت · حتى 4 لاعبين', hintOn: 'كل لاعب من أي مكان وعلى أي شبكة (واي فاي أو بيانات الجوال). المضيف ينشئ غرفة ويرسل الرمز لأصحابه. الخدمة مجانية.', direct: 'اتصال مباشر', relay: 'عبر خادم وسيط', natFail: 'تعذّر الوصول إلى المضيف عبر الإنترنت — جرّبوا شبكة أخرى أو أضف خادم وسيط', adv: 'خادم وسيط خاص (اختياري)', advApp: 'اسم التطبيق في Metered', advKey: 'مفتاح API', advNote: 'حساب مجاني في metered.ca يعطي 20 غيغا شهرياً — يفيد إذا لم يتصل اللاعبون.', title: 'لعب جماعي', sub: 'هوتسبوت · حتى 4 لاعبين', name: 'اسمك', host: 'استضافة غرفة', join: 'انضمام لغرفة', code: 'رمز الغرفة', connect: 'اتصال', start: 'ابدأ المهمة الجماعية', cancel: 'إلغاء', leave: 'مغادرة الغرفة', close: 'إغلاق',
             hint: 'اتصلوا كلكم بنفس الهوتسبوت أو شبكة الواي فاي. يلزم إنترنت لحظة الاتصال فقط، واللعب نفسه يمر عبر الشبكة المحلية.',
             share: 'شارك هذا الرمز مع أصحابك', waitHost: 'متصل · بانتظار المضيف ليبدأ', loading: 'تحميل مكتبة الاتصال…', creating: 'إنشاء الغرفة…', joining: 'الاتصال بالغرفة…',
             online: 'الغرفة جاهزة', noNet: 'تعذّر الاتصال — تأكد من الإنترنت على جهاز الهوتسبوت', noRoom: 'لا توجد غرفة بهذا الرمز', full: 'الغرفة ممتلئة (4 لاعبين)', badCode: 'اكتب رمزاً من 4 أحرف',
             you: 'أنت', hostTag: 'المضيف', joined: n => `${n} انضم للفريق`, left: n => `${n} غادر`, hostLeft: 'المضيف غادر — العودة للقائمة', lost: 'انقطع الاتصال بالمضيف… جارٍ إعادة الاتصال', back: 'عاد الاتصال',
             sync: 'مزامنة الفريق…', ingame: 'الفريق في اللعب — سيتم إدخالك', solo: 'لا يوجد لاعبون آخرون بعد' },
-        en: { title: 'Co-op', sub: 'Hotspot · up to 4 players', name: 'Your name', host: 'Host a room', join: 'Join a room', code: 'Room code', connect: 'Connect', start: 'Start co-op mission', cancel: 'Cancel', leave: 'Leave room', close: 'Close',
+        en: { mOnline: 'Online', mLocal: 'Local', subOn: 'Over the internet · up to 4 players', hintOn: 'Everyone plays from anywhere, on any network (Wi-Fi or mobile data). The host creates a room and sends the code. The service is free.', direct: 'direct link', relay: 'through a relay', natFail: 'Could not reach the host over the internet — try another network or add a relay', adv: 'Your own relay (optional)', advApp: 'Metered app name', advKey: 'API key', advNote: 'A free metered.ca account gives 20 GB a month — useful if players cannot connect.', title: 'Co-op', sub: 'Hotspot · up to 4 players', name: 'Your name', host: 'Host a room', join: 'Join a room', code: 'Room code', connect: 'Connect', start: 'Start co-op mission', cancel: 'Cancel', leave: 'Leave room', close: 'Close',
             hint: 'Everyone joins the same hotspot or Wi-Fi. Internet is needed only for a moment to connect; the game itself runs over the local network.',
             share: 'Share this code with your friends', waitHost: 'Connected · waiting for the host to start', loading: 'Loading the network library…', creating: 'Creating the room…', joining: 'Connecting to the room…',
             online: 'Room ready', noNet: 'Could not connect — check the internet on the hotspot phone', noRoom: 'No room with this code', full: 'The room is full (4 players)', badCode: 'Type a 4-letter code',
             you: 'you', hostTag: 'host', joined: n => `${n} joined the team`, left: n => `${n} left`, hostLeft: 'The host left — back to the menu', lost: 'Lost the host… reconnecting', back: 'Reconnected',
             sync: 'Syncing the team…', ingame: 'The team is playing — taking you in', solo: 'No other players yet' },
-        es: { title: 'Cooperativo', sub: 'Punto de acceso · hasta 4 jugadores', name: 'Tu nombre', host: 'Crear sala', join: 'Unirse a una sala', code: 'Código de sala', connect: 'Conectar', start: 'Empezar misión cooperativa', cancel: 'Cancelar', leave: 'Salir de la sala', close: 'Cerrar',
+        es: { mOnline: 'En línea', mLocal: 'Local', subOn: 'Por internet · hasta 4 jugadores', hintOn: 'Cada uno juega desde cualquier lugar y red (Wi-Fi o datos). El anfitrión crea la sala y envía el código. El servicio es gratis.', direct: 'enlace directo', relay: 'por un relé', natFail: 'No se pudo llegar al anfitrión por internet — prueba otra red o añade un relé', adv: 'Tu propio relé (opcional)', advApp: 'Nombre de la app en Metered', advKey: 'Clave API', advNote: 'Una cuenta gratis en metered.ca da 20 GB al mes — útil si no conectan.', title: 'Cooperativo', sub: 'Punto de acceso · hasta 4 jugadores', name: 'Tu nombre', host: 'Crear sala', join: 'Unirse a una sala', code: 'Código de sala', connect: 'Conectar', start: 'Empezar misión cooperativa', cancel: 'Cancelar', leave: 'Salir de la sala', close: 'Cerrar',
             hint: 'Todos en el mismo punto de acceso o Wi-Fi. Solo hace falta internet un momento para conectar; el juego va por la red local.',
             share: 'Comparte este código con tus amigos', waitHost: 'Conectado · esperando al anfitrión', loading: 'Cargando la red…', creating: 'Creando la sala…', joining: 'Conectando a la sala…',
             online: 'Sala lista', noNet: 'No se pudo conectar — revisa internet en el móvil del punto de acceso', noRoom: 'No hay sala con ese código', full: 'La sala está llena (4)', badCode: 'Escribe un código de 4 letras',
             you: 'tú', hostTag: 'anfitrión', joined: n => `${n} se unió`, left: n => `${n} salió`, hostLeft: 'El anfitrión salió — volviendo al menú', lost: 'Conexión perdida… reconectando', back: 'Reconectado',
             sync: 'Sincronizando el equipo…', ingame: 'El equipo está jugando — entrando', solo: 'Aún no hay más jugadores' },
-        zh: { title: '联机合作', sub: '热点 · 最多 4 人', name: '你的名字', host: '创建房间', join: '加入房间', code: '房间码', connect: '连接', start: '开始合作任务', cancel: '取消', leave: '离开房间', close: '关闭',
+        zh: { mOnline: '在线', mLocal: '本地', subOn: '通过互联网 · 最多 4 人', hintOn: '每个人可在任何地方、任何网络（Wi-Fi 或移动数据）游玩。房主创建房间并发送房间码。服务免费。', direct: '直连', relay: '经中继', natFail: '无法通过互联网连接房主 — 请换个网络或添加中继', adv: '自己的中继（可选）', advApp: 'Metered 应用名', advKey: 'API 密钥', advNote: 'metered.ca 免费账户每月 20 GB — 连不上时有用。', title: '联机合作', sub: '热点 · 最多 4 人', name: '你的名字', host: '创建房间', join: '加入房间', code: '房间码', connect: '连接', start: '开始合作任务', cancel: '取消', leave: '离开房间', close: '关闭',
             hint: '所有人连接同一个热点或 Wi-Fi。只在连接时需要一下网络，游戏本身走局域网。',
             share: '把这个房间码发给朋友', waitHost: '已连接 · 等待房主开始', loading: '加载联机组件…', creating: '创建房间…', joining: '连接房间…',
             online: '房间已就绪', noNet: '无法连接 — 请检查开热点手机的网络', noRoom: '没有这个房间码', full: '房间已满（4 人）', badCode: '请输入 4 位房间码',
             you: '你', hostTag: '房主', joined: n => `${n} 加入了队伍`, left: n => `${n} 离开了`, hostLeft: '房主已离开 — 返回菜单', lost: '与房主断开… 正在重连', back: '已重新连接',
             sync: '正在同步队伍…', ingame: '队伍正在游戏中 — 正在带你进入', solo: '还没有其他玩家' },
-        ja: { title: '協力プレイ', sub: 'テザリング · 最大4人', name: '名前', host: 'ルームを作る', join: 'ルームに参加', code: 'ルームコード', connect: '接続', start: '協力ミッション開始', cancel: 'キャンセル', leave: 'ルームを出る', close: '閉じる',
+        ja: { mOnline: 'オンライン', mLocal: 'ローカル', subOn: 'インターネット経由 · 最大4人', hintOn: 'どこからでも、どの回線（Wi-Fi・モバイル通信）でも遊べます。ホストがルームを作りコードを送ります。無料です。', direct: '直接接続', relay: 'リレー経由', natFail: 'インターネット経由でホストに届きません — 別の回線を試すかリレーを追加してください', adv: '自分のリレー（任意）', advApp: 'Metered アプリ名', advKey: 'API キー', advNote: 'metered.ca の無料アカウントで月 20 GB — 接続できない時に有効。', title: '協力プレイ', sub: 'テザリング · 最大4人', name: '名前', host: 'ルームを作る', join: 'ルームに参加', code: 'ルームコード', connect: '接続', start: '協力ミッション開始', cancel: 'キャンセル', leave: 'ルームを出る', close: '閉じる',
             hint: '全員が同じテザリングかWi-Fiに接続。接続の瞬間だけネットが必要で、ゲーム自体はローカルネットワークで動きます。',
             share: 'このコードを友達に伝えてください', waitHost: '接続済み · ホストの開始待ち', loading: '通信ライブラリを読み込み中…', creating: 'ルームを作成中…', joining: 'ルームに接続中…',
             online: 'ルーム準備完了', noNet: '接続できません — テザリング元のネットを確認', noRoom: 'このコードのルームはありません', full: 'ルームは満員です（4人）', badCode: '4文字のコードを入力',
@@ -74,22 +79,57 @@ window.AxonNet = (function () {
         });
         return lib;
     }
-    const PEER_OPTS = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
+    // ---------- how the devices reach each other ----------
+    // LOCAL: STUN only (a direct link on the same network). ONLINE: the same, plus relays for the phones that cannot
+    // be reached directly — the free PeerJS relays, and the player's own Metered relays if a key was entered.
+    const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+    const FREE_TURN = [{ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }];
+    const ls = (k, d = '') => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
+    let mode = ls('axon.mpMode', 'online') === 'local' ? 'local' : 'online', extraIce = null;
+    function peerOpts() { return { debug: 0, config: { iceServers: mode === 'local' ? STUN : STUN.concat(FREE_TURN, extraIce || []) } }; }
+    // the player's own relay list (asked once per session; a failure just means the free relays are used)
+    function loadIce() {
+        const app = ls('axon.turnApp').trim().replace(/[^a-z0-9-]/gi, ''), key = ls('axon.turnKey').trim();
+        if (mode === 'local' || !app || !key || extraIce) return Promise.resolve();
+        return Promise.race([fetch(`https://${app}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(key)}`).then(r => r.ok ? r.json() : []), new Promise(r => setTimeout(() => r([]), 4000))])
+            .then(list => { if (Array.isArray(list) && list.length) extraIce = list.filter(x => x && x.urls).slice(0, 6); }).catch(() => { });
+    }
+    // direct or relayed, and the ping: read from the live connection every few seconds
+    const links = new Map();            // slot (host side) or 0 (guest side) → { relay, ms }
+    function probe(conn, slot) {
+        const pc = conn && conn.peerConnection; if (!pc || !pc.getStats) return;
+        pc.getStats().then(st => { let pair = null; const byId = {}; st.forEach(r => { byId[r.id] = r; if (r.type === 'transport' && r.selectedCandidatePairId) pair = r.selectedCandidatePairId; });
+            let p = pair ? byId[pair] : null; if (!p) st.forEach(r => { if (r.type === 'candidate-pair' && r.state === 'succeeded' && (r.nominated || r.selected)) p = r; });
+            if (!p) return; const lc = byId[p.localCandidateId], rc = byId[p.remoteCandidateId];
+            links.set(slot, { relay: !!((lc && lc.candidateType === 'relay') || (rc && rc.candidateType === 'relay')), ms: p.currentRoundTripTime != null ? Math.round(p.currentRoundTripTime * 1000) : -1 });
+            if (panel && panel.classList.contains('show')) renderLobby();
+        }).catch(() => { });
+    }
+    setInterval(() => { if (role === 'host') conns.forEach((c, slot) => { if (c.conn.open) probe(c.conn, slot); }); else if (hostConn && hostConn.open) probe(hostConn, 0); }, 3000);
+    const linkText = slot => { const l = links.get(slot); return l ? ` · ${S(l.relay ? 'relay' : 'direct')}${l.ms >= 0 ? ' · ' + l.ms + ' ms' : ''}` : ''; };
+
 
     let peer = null, role = null, code = null, mySlot = 0, phase = 'idle';
     const conns = new Map();            // host: slot → { conn, name, look, rx }
     let hostConn = null, hostRx = 0, lostT = 0;
     let roster = [];                    // [{ slot, name, look }]
     const handlers = [];
-    let retryTimer = 0, closing = false;
+    let retryTimer = 0, closing = false, natT = 0;
 
     const emit = (m, from) => handlers.forEach(h => { try { h(m, from); } catch (e) { console.warn('net', e); } });
+    // cheats in a room: only the host decides, and it is the same for everyone (unlimited armour + energy) — ui.js asks AxonNet.cheats
+    let roomCheat = false;
+    const CH = { ar: ['الغش للجميع', 'مفعّل', 'متوقف', 'درع وطاقة بلا حدود لكل اللاعبين'], en: ['Cheats for everyone', 'ON', 'OFF', 'unlimited armour and energy for all players'], es: ['Trucos para todos', 'SÍ', 'NO', 'armadura y energía ilimitadas para todos'], zh: ['全员作弊', '开', '关', '所有玩家无限护甲和能量'], ja: ['全員チート', 'ON', 'OFF', '全プレイヤーのアーマーとエネルギーが無限'] };
+    const chT = () => CH[(I() && CH[I().lang]) ? I().lang : 'en'];
+    const chRow = can => `<div class="mp-row"><label>${chT()[0]}<br><small style="opacity:.6;font-weight:400">${chT()[3]}</small></label><button class="mp-b${roomCheat ? ' on' : ''}" type="button" ${can ? 'data-mp="cheat"' : 'disabled'}>${chT()[roomCheat ? 1 : 2]}</button></div>`;
     function rosterUpdate() {
         if (role !== 'host') return;
         roster = [{ slot: 0, name: myName() || 'P1', look: lookNow() }];
         conns.forEach((c, slot) => roster.push({ slot, name: c.name, look: c.look }));
         roster.sort((a, b) => a.slot - b.slot);
-        broadcast({ t: 'roster', list: roster });
+        roomCheat = ls('axon.mpCheat') === '1';                                  // the host's switch: cheats for the whole room, or for nobody
+        broadcast({ t: 'roster', list: roster, ch: roomCheat ? 1 : 0 });
         emit({ t: 'roster', list: roster }, 0); renderLobby();
     }
     // host → every guest (except one)
@@ -106,11 +146,11 @@ window.AxonNet = (function () {
     const newCode = () => Array.from({ length: 4 }, () => CODE_CH[Math.floor(Math.random() * CODE_CH.length)]).join('');
     function hostRoom(reconnect) {
         role = 'host'; mySlot = 0; status(S('creating'));
-        loadLib().then(() => {
+        loadLib().then(loadIce).then(() => {
             let tries = 0;
             const open = () => {
                 if (!reconnect && !code) code = newCode();
-                peer = new window.Peer(PFX + code, PEER_OPTS);
+                peer = new window.Peer(PFX + code, peerOpts());
                 peer.on('open', () => { phase = session ? 'game' : 'lobby'; status(S('online')); rosterUpdate(); });
                 peer.on('connection', conn => acceptGuest(conn));
                 peer.on('disconnected', () => { if (!closing) setTimeout(() => { try { peer && !peer.destroyed && peer.reconnect(); } catch (e) { } }, 1500); });
@@ -163,10 +203,10 @@ window.AxonNet = (function () {
     // ---------- guest ----------
     function joinRoom(c, reconnect) {
         role = 'client'; code = c; status(S('joining'));
-        loadLib().then(() => {
+        loadLib().then(loadIce).then(() => {
             const connect = () => {
                 if (!peer || peer.destroyed) {
-                    peer = new window.Peer(PEER_OPTS);
+                    peer = new window.Peer(peerOpts());
                     peer.on('open', () => dial());
                     peer.on('disconnected', () => { if (!closing) setTimeout(() => { try { peer && !peer.destroyed && peer.reconnect(); } catch (e) { } }, 1500); });
                     peer.on('error', err => {
@@ -180,8 +220,9 @@ window.AxonNet = (function () {
                 if (closing || !peer || peer.destroyed) return;
                 if (hostConn) { try { hostConn.close(); } catch (e) { } }
                 const conn = hostConn = peer.connect(PFX + code, { reliable: true, serialization: 'json' });
+                clearTimeout(natT); natT = setTimeout(() => { if (conn === hostConn && !conn.open && !closing && !session) status(S(mode === 'online' ? 'natFail' : 'noNet'), true); }, 14000);
                 conn.on('open', () => {
-                    hostRx = performance.now(); lostT = 0;
+                    clearTimeout(natT); hostRx = performance.now(); lostT = 0;
                     conn.send({ t: 'hello', name: myName() || 'P', look: lookNow(), slot: session ? session.slot : 0, seed: session ? session.seed : null });
                 });
                 conn.on('data', m => onHostMsg(m));
@@ -208,7 +249,7 @@ window.AxonNet = (function () {
             session.slot = mySlot; saveSession(); phase = 'game'; emit({ t: 'connected' });
             return;
         }
-        if (m.t === 'roster') { roster = m.list || []; renderLobby(); emit(m, 0); return; }
+        if (m.t === 'roster') { roster = m.list || []; roomCheat = !!m.ch; renderLobby(); emit(m, 0); return; }
         if (m.t === 'start' || m.t === 'goto') {
             session = { role: 'client', code, slot: mySlot, seed: m.seed }; saveSession();
             if (m.t === 'start') status(S('sync'));
@@ -317,6 +358,8 @@ window.AxonNet = (function () {
       .mp-p.empty{opacity:.35}
       .mp-status{font-size:12px;color:var(--cyan);min-height:16px}.mp-status.err{color:#ff7a8e}
       .mp-hint{font-size:11px;line-height:1.6;color:var(--dim);margin:0}
+      .mp-seg{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line)} .mp-seg .mp-b{border:0;background:transparent;color:var(--dim)} .mp-seg .mp-b.on{background:var(--cyan);color:#04121e}
+      .mp-adv{border:1px dashed var(--line);padding:6px 10px} .mp-adv summary{cursor:pointer;font-size:11px;letter-spacing:.06em;color:var(--dim)} .mp-adv[open] summary{margin-bottom:8px;color:var(--cyan)} .mp-adv .mp-row{margin-bottom:6px}
       html.rtl-text .mp-card{direction:rtl} .mp-code,.mp-big b{direction:ltr}
       #stage.short .mp-card{padding:12px 14px;gap:8px} #stage.short .mp-big b{font-size:28px}`;
     function ensurePanel() {
@@ -328,8 +371,10 @@ window.AxonNet = (function () {
             const b = e.target.closest('[data-mp]'); if (!b) { if (e.target === panel) closeLobby(); return; }
             const A = window.__axonAudio; if (A) { try { A.init(); A.playLock(); } catch (err) { } }
             const nameIn = panel.querySelector('#mp-name'); if (nameIn) setName(nameIn.value.trim().slice(0, 14));
+            const ta = panel.querySelector('#mp-tapp'), tk = panel.querySelector('#mp-tkey'); if (ta && tk && (ta.value.trim() !== ls('axon.turnApp') || tk.value.trim() !== ls('axon.turnKey'))) { lsSet('axon.turnApp', ta.value.trim()); lsSet('axon.turnKey', tk.value.trim()); extraIce = null; }
             const act = b.dataset.mp;
-            if (act === 'close') closeLobby();
+            if (act === 'm-online' || act === 'm-local') { if (!role) { mode = act === 'm-local' ? 'local' : 'online'; lsSet('axon.mpMode', mode); extraIce = null; } renderLobby(); }
+            else if (act === 'close') closeLobby();
             else if (act === 'host') { view = 'host'; renderLobby(); hostRoom(false); }
             else if (act === 'join') { view = 'join'; renderLobby(); }
             else if (act === 'connect') {
@@ -337,6 +382,7 @@ window.AxonNet = (function () {
                 if (!/^[a-z0-9]{4}$/.test(c)) { status(S('badCode'), true); return; }
                 joinRoom(c, false);
             } else if (act === 'start') startTeam();
+            else if (act === 'cheat') { if (role === 'host') { lsSet('axon.mpCheat', roomCheat ? '0' : '1'); rosterUpdate(); } }
             else if (act === 'cancel') { leave(true); view = 'home'; stMsg = ''; renderLobby(); }
         });
     }
@@ -348,25 +394,32 @@ window.AxonNet = (function () {
             const p = roster.find(r => r.slot === s);
             if (!p) return `<div class="mp-p empty"><i style="background:${hex(COLORS[s])}"></i><b>—</b></div>`;
             const tag = s === 0 ? S('hostTag') : '', me = s === mySlot ? ` · ${S('you')}` : '';
-            return `<div class="mp-p"><i style="background:${hex(COLORS[s])}"></i><b>${String(p.name).replace(/[<>&"]/g, '')}</b><small>${tag}${me}</small></div>`;
+            const lk = role === 'host' ? (s ? linkText(s) : '') : (s === mySlot ? linkText(0) : '');
+            return `<div class="mp-p"><i style="background:${hex(COLORS[s])}"></i><b>${String(p.name).replace(/[<>&"]/g, '')}</b><small>${tag}${me}${lk}</small></div>`;
         }).join('');
         let body;
         if (view === 'host' && role === 'host') {
             body = `<div class="mp-big"><span>${S('code')}</span><b>${code || '····'}</b><span>${S('share')}</span></div>
-              <div class="mp-list">${slots}</div>
+              <div class="mp-list">${slots}</div>${chRow(true)}
               <div class="mp-btns"><button class="mp-b" type="button" data-mp="cancel">${S('cancel')}</button><button class="mp-b pri" type="button" data-mp="start" ${phase === 'lobby' ? '' : 'disabled'}>${S('start')}</button></div>`;
         } else if (view === 'join') {
             body = `<div class="mp-row"><label>${S('code')}</label><input id="mp-code" class="mp-in mp-code" maxlength="4" autocomplete="off" autocapitalize="off" spellcheck="false" value="${role === 'client' && code ? code : ''}"></div>
-              ${role === 'client' && roster.length ? `<div class="mp-list">${slots}</div>` : ''}
+              ${role === 'client' && roster.length ? `<div class="mp-list">${slots}</div>${chRow(false)}` : ''}
               ${role === 'client' && phase === 'lobby' ? `<div class="mp-big"><span>${S('waitHost')}</span></div>` : ''}
               <div class="mp-btns"><button class="mp-b" type="button" data-mp="cancel">${S('cancel')}</button>${role === 'client' && phase === 'lobby' ? '' : `<button class="mp-b pri" type="button" data-mp="connect">${S('connect')}</button>`}</div>`;
         } else {
-            body = `<div class="mp-row"><label>${S('name')}</label><input id="mp-name" class="mp-in" maxlength="14" value="${nm}" placeholder="P1"></div>
-              <div class="mp-btns"><button class="mp-b pri" type="button" data-mp="host">${S('host')}</button><button class="mp-b" type="button" data-mp="join">${S('join')}</button></div>`;
+            const esc = v => String(v).replace(/[<>&"]/g, '');
+            body = `<div class="mp-seg"><button class="mp-b${mode === 'online' ? ' on' : ''}" type="button" data-mp="m-online">${S('mOnline')}</button><button class="mp-b${mode === 'local' ? ' on' : ''}" type="button" data-mp="m-local">${S('mLocal')}</button></div>
+              <div class="mp-row"><label>${S('name')}</label><input id="mp-name" class="mp-in" maxlength="14" value="${nm}" placeholder="P1"></div>
+              <div class="mp-btns"><button class="mp-b pri" type="button" data-mp="host">${S('host')}</button><button class="mp-b" type="button" data-mp="join">${S('join')}</button></div>
+              ${mode === 'online' ? `<details class="mp-adv"${ls('axon.turnKey') ? ' open' : ''}><summary>${S('adv')}</summary>
+                <div class="mp-row"><label>${S('advApp')}</label><input id="mp-tapp" class="mp-in" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" dir="ltr" value="${esc(ls('axon.turnApp'))}"></div>
+                <div class="mp-row"><label>${S('advKey')}</label><input id="mp-tkey" class="mp-in" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" dir="ltr" value="${esc(ls('axon.turnKey'))}"></div>
+                <p class="mp-hint">${S('advNote')}</p></details>` : ''}`;
         }
         panel.innerHTML = `<div class="mp-card"><button class="mp-x" type="button" data-mp="close" aria-label="${S('close')}">×</button>
-            <h2>${S('title')} <small>${S('sub')}</small></h2>${body}
-            <div class="mp-status${stErr ? ' err' : ''}">${stMsg}</div><p class="mp-hint">${S('hint')}</p></div>`;
+            <h2>${S('title')} <small>${S(mode === 'online' ? 'subOn' : 'sub')}</small></h2>${body}
+            <div class="mp-status${stErr ? ' err' : ''}">${stMsg}</div><p class="mp-hint">${S(mode === 'online' ? 'hintOn' : 'hint')}</p></div>`;
         const ci = panel.querySelector('#mp-code'); if (ci) ci.addEventListener('input', () => { ci.value = ci.value.toLowerCase().replace(/[^a-z0-9]/g, ''); });
     }
     function openLobby() {
@@ -389,6 +442,7 @@ window.AxonNet = (function () {
         get on() { return !!session; },                    // a co-op game is running (world seed shared)
         get role() { return session ? session.role : role; },
         get slot() { return mySlot; },
+        get cheats() { return roomCheat; },
         get seed() { return session ? session.seed : null; },
         get roster() { return roster; },
         get peers() { return role === 'host' ? conns.size : roster.length - 1; },
@@ -402,3 +456,4 @@ window.AxonNet = (function () {
         lookChanged() { const lk = lookNow(); if (role === 'host') rosterUpdate(); else send({ t: 'look', look: lk }); }
     };
 })();
+

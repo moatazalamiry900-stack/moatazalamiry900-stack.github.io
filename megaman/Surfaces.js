@@ -102,55 +102,84 @@ window.AxonSurf = (function () {
     // ---- the FACILITY of mission 01 has its own surfaces, nothing like the HQ's navy panels and cyan grid:
     //      warm where the HQ is cold, light where it is dark — sand-coloured tread-plate floors, rust-red ribbed walls
     //      with rivets and a hazard band, yellow striped gate frames, orange seams.
+    // ---- the FACILITY of mission 01 is dug into a giant geode: every surface is cut crystal.
+    //      Faceted gem walls held by gold struts, dark polished stone floors veined with light, gold gates set with gems.
+    //      The paint is grey and the glow maps white: look.js turns each sector into a different gemstone. ----
+    // a seamless mosaic of facets (a jittered grid on a torus, each cell split in two triangles)
+    const facets = (S, nx, ny, jit) => {
+        const cw = S / nx, ch = S / ny, V = [], F = [], T = [];
+        for (let i = 0; i < nx; i++) { V.push([]); F.push([]); T.push([]); for (let j = 0; j < ny; j++) { V[i].push([(i + (rnd() - 0.5) * jit) * cw, (j + (rnd() - 0.5) * jit) * ch]); F[i].push(rnd() > 0.5); T[i].push([rnd(), rnd(), rnd(), rnd()]); } }
+        const w = (k, n) => ((k % n) + n) % n, P = (i, j) => { const v = V[w(i, nx)][w(j, ny)]; return [v[0] + Math.floor(i / nx) * S, v[1] + Math.floor(j / ny) * S]; };
+        const tris = [];
+        for (let i = -1; i <= nx; i++) for (let j = -1; j <= ny; j++) {
+            const a = P(i, j), b = P(i + 1, j), c = P(i + 1, j + 1), d = P(i, j + 1), t = T[w(i, nx)][w(j, ny)];
+            if (F[w(i, nx)][w(j, ny)]) tris.push([a, b, c, t[0], t[2]], [a, c, d, t[1], t[3]]); else tris.push([a, b, d, t[0], t[2]], [b, c, d, t[1], t[3]]);
+        }
+        return tris;
+    };
+    const cut = (g, tris, lo, hi, glint) => {
+        for (const [a, b, c, t] of tris) {
+            const v = lo + (hi - lo) * t, gr = g.createLinearGradient(a[0], a[1], (b[0] + c[0]) / 2, (b[1] + c[1]) / 2);
+            gr.addColorStop(0, `rgb(${v + 26 | 0},${v + 26 | 0},${v + 30 | 0})`); gr.addColorStop(1, `rgb(${v - 18 | 0},${v - 18 | 0},${v - 14 | 0})`);
+            g.fillStyle = gr; g.strokeStyle = `rgb(${v | 0},${v | 0},${v | 0})`; g.lineWidth = 1; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); g.closePath(); g.fill(); g.stroke();
+        }
+        g.lineWidth = 1.2;
+        for (const [a, b, c, t, u] of tris) { g.strokeStyle = `rgba(255,255,255,${glint * (0.3 + u)})`; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.strokeStyle = `rgba(0,0,0,${0.5 * glint})`; g.beginPath(); g.moveTo(b[0], b[1]); g.lineTo(c[0], c[1]); g.stroke(); }
+    };
+    const gold = (g, x, y, w, h, vert) => {
+        const gr = vert ? g.createLinearGradient(x, 0, x + w, 0) : g.createLinearGradient(0, y, 0, y + h);
+        gr.addColorStop(0, '#5a3d14'); gr.addColorStop(0.25, '#e9c46a'); gr.addColorStop(0.5, '#b8862e'); gr.addColorStop(0.8, '#f3d98a'); gr.addColorStop(1, '#4a3010');
+        g.fillStyle = gr; g.fillRect(x, y, w, h);
+    };
+    let FT = null, WT = null;
     Object.assign(SURF, {
         mfloor: {
-            map: makeCanvas((g, S) => {
-                g.fillStyle = '#3a2a1c'; g.fillRect(0, 0, S, S);
-                for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {                       // four bevelled plates
-                    const x = i * 128, y = j * 128, v = ((i + j) % 2) * 14;
-                    g.fillStyle = `rgb(${150 + v},${122 + v},${86 + v})`; g.fillRect(x + 3, y + 3, 122, 122);
-                    g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(x + 3, y + 3, 122, 3); g.fillRect(x + 3, y + 3, 3, 122);
-                    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x + 3, y + 122, 122, 3); g.fillRect(x + 122, y + 3, 3, 122);
-                    g.strokeStyle = 'rgba(60,36,16,.4)'; g.lineWidth = 3; g.lineCap = 'round';       // tread: short diagonal bars, alternating
-                    for (let a = 0; a < 5; a++) for (let b = 0; b < 5; b++) { const cx = x + 20 + a * 22, cy = y + 20 + b * 22, d = (a + b) % 2 ? 5 : -5; g.beginPath(); g.moveTo(cx - 5, cy - d); g.lineTo(cx + 5, cy + d); g.stroke(); }
-                    g.fillStyle = '#4a3420'; for (const [bx, by] of [[10, 10], [114, 10], [10, 114], [114, 114]]) { g.beginPath(); g.arc(x + bx, y + by, 3, 0, 7); g.fill(); }   // bolts
-                }
+            map: big((g, S) => {
+                seed = 41; FT = facets(S, 5, 5, 0.78);
+                cut(g, FT, 34, 92, 0.16);                                                    // dark polished stone, cut in large facets
+                for (let k = 0; k < 14; k++) { const x = rnd() * S, y = rnd() * S, r = 30 + rnd() * 70, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.07)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }   // a soft polish
+                grain(g, S, 9, 0);
             }),
-            emi: makeCanvas((g, S) => {
-                g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
-                g.fillStyle = '#b8501a'; g.fillRect(0, 126, S, 4); g.fillRect(126, 0, 4, S);
-                g.fillStyle = '#ffd08a'; g.fillRect(123, 123, 10, 10);
+            emi: big((g, S) => {
+                g.fillStyle = '#000'; g.fillRect(0, 0, S, S); g.lineCap = 'round';
+                // veins of light run along some of the cuts, and a few small facets are lit from below
+                for (const [a, b, c, t, u] of FT) { if (u < 0.3) { g.strokeStyle = '#3a3a3a'; g.lineWidth = 9; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } }
+                for (const [a, b, c, t, u] of FT) { if (u < 0.3) { g.strokeStyle = '#ffffff'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } if (u > 0.93) { g.fillStyle = '#5c5c5c'; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); g.fill(); } }
             })
         },
         mwall: {
-            map: makeCanvas((g, S) => {
-                g.fillStyle = '#3c1810'; g.fillRect(0, 0, S, S);
-                for (let x = 0; x < S; x += 32) {                                               // vertical ribs
-                    g.fillStyle = '#8a3a26'; g.fillRect(x + 4, 0, 20, S);
-                    g.fillStyle = 'rgba(255,200,160,.16)'; g.fillRect(x + 4, 0, 2, S); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(x + 22, 0, 2, S);
-                }
-                g.fillStyle = '#5a2418'; g.fillRect(0, 104, S, 30);                             // a belt with rivets
-                g.fillStyle = '#c08a5a'; for (let x = 8; x < S; x += 16) { g.beginPath(); g.arc(x, 119, 3, 0, 7); g.fill(); }
-                g.save(); g.beginPath(); g.rect(0, 226, S, 30); g.clip();                        // hazard band along the bottom
-                g.fillStyle = '#1c160a'; g.fillRect(0, 226, S, 30); g.fillStyle = '#d6a81e';
-                for (let x = -40; x < S + 40; x += 32) { g.beginPath(); g.moveTo(x, 256); g.lineTo(x + 16, 256); g.lineTo(x + 46, 226); g.lineTo(x + 30, 226); g.fill(); }
-                g.restore();
+            map: big((g, S) => {
+                seed = 77; WT = facets(S, 7, 4, 0.8);
+                cut(g, WT, 96, 236, 0.42);                                                   // tall crystal faces
+                gold(g, 0, 250, S, 7, false);                                                // a thin gold band
+                gold(g, 0, 0, 18, S, true); gold(g, 256, 0, 12, S, true);                // gold struts hold the crystal
+                g.fillStyle = '#3a260c'; for (let y = 28; y < S; y += 128) { g.fillRect(0, y, 18, 3); g.fillRect(256, y + 64, 12, 3); }
+                g.fillStyle = '#f7e3a6'; for (let y = 14; y < S; y += 128) { g.beginPath(); g.arc(9, y, 3, 0, 7); g.fill(); }
+                grain(g, S, 8, 0);
             }),
-            emi: makeCanvas((g, S) => {
+            emi: big((g, S) => {
                 g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
-                g.fillStyle = '#ffb060'; g.fillRect(44, 40, 4, 44); g.fillRect(204, 150, 4, 44);
-                g.fillStyle = '#8a3a10'; g.fillRect(0, 103, S, 2);
+                for (const [a, b, c, t, u] of WT) {                                           // some faces glow from inside
+                    if (u > 0.8) { const v = 70 + (u - 0.8) * 5 * 150 | 0; g.fillStyle = `rgb(${v},${v},${v})`; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); g.fill(); }
+                    else if (u < 0.12) { g.strokeStyle = '#d8d8d8'; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+                }
+                g.fillStyle = '#000'; g.fillRect(0, 250, S, 7); g.fillRect(0, 0, 18, S); g.fillRect(256, 0, 12, S);
             })
         },
         mdoor: {
-            map: makeCanvas((g, S) => {
-                g.fillStyle = '#1c180a'; g.fillRect(0, 0, S, S);
-                g.fillStyle = '#e0b020';
-                for (let i = -S; i < S * 2; i += 64) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 32, 0); g.lineTo(i + 32 - S, S); g.lineTo(i - S, S); g.fill(); }
+            map: big((g, S) => {
+                seed = 13; gold(g, 0, 0, S, S, true);
+                for (let x = 0; x < S; x += 2) { g.fillStyle = `rgba(0,0,0,${rnd() * 0.12})`; g.fillRect(x, 0, 1, S); }      // brushed
+                g.strokeStyle = 'rgba(60,36,6,.75)'; g.lineWidth = 5;                                                         // engraved lozenges
+                for (let y = 0; y <= S; y += 128) for (let x = 0; x <= S; x += 128) { g.beginPath(); g.moveTo(x, y - 56); g.lineTo(x + 44, y); g.lineTo(x, y + 56); g.lineTo(x - 44, y); g.closePath(); g.stroke(); g.beginPath(); g.moveTo(x + 64, y + 8); g.lineTo(x + 108, y + 64); g.lineTo(x + 64, y + 120); g.lineTo(x + 20, y + 64); g.closePath(); g.stroke(); }
+                g.strokeStyle = 'rgba(255,240,190,.5)'; g.lineWidth = 1.5;
+                for (let y = 0; y <= S; y += 128) for (let x = 0; x <= S; x += 128) { g.beginPath(); g.moveTo(x - 42, y - 2); g.lineTo(x, y - 58); g.lineTo(x + 44, y - 2); g.stroke(); }
+                g.fillStyle = '#1a1206'; for (let y = 0; y <= S; y += 128) for (let x = 0; x <= S; x += 128) { g.beginPath(); g.moveTo(x, y - 20); g.lineTo(x + 15, y); g.lineTo(x, y + 20); g.lineTo(x - 15, y); g.fill(); }   // gem settings
+                grain(g, S, 10, 0);
             }),
-            emi: makeCanvas((g, S) => {
-                g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
-                g.fillStyle = '#ffa826'; g.fillRect(0, 0, S, 5); g.fillRect(0, S - 5, S, 5);
+            emi: big((g, S) => {
+                g.fillStyle = '#000'; g.fillRect(0, 0, S, S); g.fillStyle = '#ffffff';
+                for (let y = 0; y <= S; y += 128) for (let x = 0; x <= S; x += 128) { g.beginPath(); g.moveTo(x, y - 15); g.lineTo(x + 11, y); g.lineTo(x, y + 15); g.lineTo(x - 11, y); g.fill(); }
             })
         }
     });

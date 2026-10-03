@@ -174,7 +174,8 @@ window.AxonComm = (function () {
     function tick(api, player, layout, dt) {
         if (!el) build();
         if (performance.now() - last > 4000 && !running) startT = 0; last = performance.now(); hero = player;
-        const st = stage().classList, hold = st.contains('modal-on') || st.contains('boss-intro') || st.contains('winner-on') || (startT += dt) < 1.2;   // a breath after the countdown before he speaks
+        if (!warm) { warm = true; for (const who of [1, 0]) if (!PIC[who] && !PICT[who]) { PICT[who] = 1; try { PIC[who] = portrait(who ? window.AxonGuideRef : hero); } catch (e) { } } }   // the two faces are photographed now, under the countdown — not as a 0.4 s freeze at the first talk
+        const st = stage().classList, hold = st.contains('modal-on') || st.contains('boss-intro') || st.contains('winner-on') || st.contains('chase-on') || (startT += dt) < 1.2;   // a breath after the countdown before he speaks
         // ---- what is in front of the hero? ----
         const p = player.mesh.position, Z = layout.zones;
         while (zi < Z.length - 1 && p.z < Z[zi].z1) zi++; while (zi > 0 && p.z > Z[zi].z0) zi--;
@@ -223,6 +224,7 @@ window.AxonComm = (function () {
     // ---------- portraits: the head of a live model (Kendel in the HQ, the hero), photographed once ----------
     // The model is lent to a small scene of its own for one frame (its own lights, a second renderer that is
     // thrown away afterwards) and put back exactly where it was.
+    let warm = false;
     function portrait(P) {
         if (!P || !P.mesh || !P.headGroup || !window.THREE) return null;
         const m = P.mesh, par = m.parent, vis = m.visible, ex = P.extra, exV = ex ? ex.visible : true, pos = m.position.clone(), rot = m.rotation.clone();

@@ -88,7 +88,19 @@ window.AxonCoop = (function () {
         A.eyes.forEach(e => { live.add(e); const u = e.userData; [u.lid, u.lidSkin, u.lash, u.iris, u.brow].forEach(o => o && live.add(o)); });
         try { window.AxonPerf.skinRig(A.mesh, o => live.has(o), m => keep.has(m.material)); } catch (err) { console.warn('avatar rig', err); }
         A.tag = nameTag(N().nameOf(slot), N().COLORS[slot] || 0xffffff); A.tag.position.y = 3.75; A.mesh.add(A.tag);
-        A.mesh.visible = false;
+        A.mesh.visible = false; A.mesh.userData.lazy = true;
+        // far from my hero a teammate is a stand-in of a few boxes in his own colours (one draw call, ~100 triangles instead of ~100 000)
+        try {
+            const col = (m, d) => (m && m.color ? m.color.getHex() : d), B = (w, h, d, c, x, y, z, rz = 0) => { const g = new THREE.BoxGeometry(w, h, d).toNonIndexed(), k = new THREE.Color(c), a = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < a.length; i += 3) { a[i] = k.r; a[i + 1] = k.g; a[i + 2] = k.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return { geo: g, matrix: new THREE.Matrix4().makeRotationZ(rz).setPosition(x, y, z) }; };
+            const pe = col(M.pearl, 0xe8eef6), st = col(M.steel, 0x2a3342), ac = col(M.accent, 0x39d7ff), gl = col(M.glow, 0x7ff3ff), sk = col(M.skin, 0xf0c8a8), ha = col(M.hair, 0xffffff);
+            const geo = window.AxonPerf.mergeGeometries([B(0.3, 1.3, 0.36, st, -0.24, 0.65, 0), B(0.3, 1.3, 0.36, st, 0.24, 0.65, 0), B(0.34, 0.3, 0.5, pe, -0.24, 0.15, 0.06), B(0.34, 0.3, 0.5, pe, 0.24, 0.15, 0.06),
+                B(0.9, 1.0, 0.5, pe, 0, 1.85, 0), B(0.5, 0.3, 0.52, ac, 0, 2.0, 0.02), B(0.6, 0.3, 0.42, st, 0, 1.3, 0), B(0.24, 1.0, 0.26, pe, -0.6, 1.85, 0, -0.12), B(0.24, 1.0, 0.26, pe, 0.6, 1.85, 0, 0.12),
+                B(0.44, 0.44, 0.44, sk, 0, 2.66, 0), B(0.5, 0.26, 0.5, ha, 0, 2.94, -0.02), B(0.09, 1.7, 0.05, gl, 0.74, 1.7, 0.1, -0.5)]);
+            A.lod = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.3 })); A.lod.visible = false; A.lod.userData.lazy = true;
+            const t2 = new THREE.Sprite(A.tag.material); t2.scale.copy(A.tag.scale); t2.position.y = 3.75; t2.renderOrder = 6; A.lod.add(t2); C.api.scene.add(A.lod);
+            if (window.AxonHeroShadow) window.AxonHeroShadow.apply(A.mesh);                 // near teammates: the shadow comes from a light stand-in on the same skeleton (heroperf.js)
+            A.casters = []; A.mesh.traverse(o => { if (o.isMesh && o.castShadow) A.casters.push(o); });
+        } catch (err) { A.lod = null; }
         return A;
     }
     function nameTag(text, color) {
@@ -104,7 +116,7 @@ window.AxonCoop = (function () {
     }
     function removeMate(slot) {
         const m = mates.get(slot); if (!m) return;
-        if (m.A) { C.api.scene.remove(m.A.mesh); if (m.A.trail) C.api.scene.remove(m.A.trail.mesh); }
+        if (m.A) { C.api.scene.remove(m.A.mesh); if (m.A.lod) C.api.scene.remove(m.A.lod); if (m.A.trail) C.api.scene.remove(m.A.trail.mesh); }
         mates.delete(slot); drawTeam();
     }
     function mate(slot) {
@@ -171,6 +183,8 @@ window.AxonCoop = (function () {
             case 'fx': if (host()) N().relay(m, from); ghostShot(m); break;
             case 'hit': if (host()) remoteHit(m, from); break;
             case 'dmg': if (!C.player.dead) C.player.takeDamage(m.d); break;
+            case 'ty': if (host()) N().relay(m, from); if (window.AxonToys) window.AxonToys.remote(m); break;       // a teammate set a device off (toys.js)
+            case 'pz': if (host()) N().relay(m, from); if (window.AxonRiddle) window.AxonRiddle.remote(m); break;   // a teammate settled an eye door (riddle.js)
             case 'S': if (guest() && where() === 'm') snapshot(m); break;
             case 'k': if (guest()) killed(m); break;
             case 'sp': if (guest()) spawned(m); break;
@@ -200,7 +214,7 @@ window.AxonCoop = (function () {
         N().roster.forEach(r => {
             if (r.slot === N().slot) return;
             const m = mate(r.slot), key = JSON.stringify(r.look || {}) + r.name;
-            if (m.lookKey !== key) { m.lookKey = key; if (m.A) { C.api.scene.remove(m.A.mesh); if (m.A.trail) C.api.scene.remove(m.A.trail.mesh); } m.A = null; m.look = r.look; }
+            if (m.lookKey !== key) { m.lookKey = key; if (m.A) { C.api.scene.remove(m.A.mesh); if (m.A.lod) C.api.scene.remove(m.A.lod); if (m.A.trail) C.api.scene.remove(m.A.trail.mesh); } m.A = null; m.look = r.look; }
         });
         mates.forEach((m, slot) => { if (!N().roster.some(r => r.slot === slot)) removeMate(slot); });
         drawTeam();
@@ -290,7 +304,9 @@ window.AxonCoop = (function () {
     function pullTo(x, y, z, who) {
         const P = C.player, p = P.mesh.position;
         C.fxFlash(p.clone().setY(p.y + 1.3));
-        const o = SPOT[N().slot % 4]; p.set(x + (o[0] || 1.5), y + 0.05, z + o[1]); if (C.api.freeSpot) C.api.freeSpot(p);   // beside the teammate, never inside
+        const o = SPOT[N().slot % 4];
+        if (who !== undefined) p.set(x, y + 0.05, z);                    // to a teammate: exactly where they stand (a spot that is surely floor — beside them could be a pillar or the void); the heroes then step apart on their own
+        else { p.set(x + (o[0] || 1.5), y + 0.05, z + o[1]); if (C.api.freeSpot) C.api.freeSpot(p); }
         P.lastSafePos.copy(p); P.velocity.set(0, 0, 0); P.ledge = null; P.wallSlide = 0;
         C.fxFlash(p.clone().setY(p.y + 1.3)); C.api.AudioSys.playLock();
         if (who !== undefined) C.toast(tr(PULLED, N().nameOf(who)));
@@ -332,7 +348,7 @@ window.AxonCoop = (function () {
         if (!best) return;
         const s = best.m.st.p;
         P.dead = false; P.hp = Math.round(P.maxHp * 0.5); P.invincibleTimer = 2.5; P.mesh.visible = true;
-        pullTo(s[0] + (Math.random() - 0.5) * 3, s[1], s[2] + 2, best.slot);
+        pullTo(s[0], s[1], s[2], best.slot);
     }
 
     // ---------- per-enemy tick (game.js main loop) ----------
@@ -451,7 +467,11 @@ window.AxonCoop = (function () {
             if (!m.A) { m.A = makeAvatar(slot, m.look || N().lookOf(slot)); m.A.mesh.position.set(st.p[0], st.p[1], st.p[2]); }
             const A = m.A, age = Math.min(0.25, (now - m.rx) / 1000), fresh = now - m.rx < 4000;
             const show = fresh && st.w === W && W !== 'x' && !(st.f & 4);
-            A.mesh.visible = show; if (A.trail) A.trail.mesh.visible = show && A.trail.mesh.visible;
+            // three levels of detail by distance from my hero: full · full without a shadow · the stand-in
+            const d2m = (st.p[0] - P.mesh.position.x) ** 2 + (st.p[2] - P.mesh.position.z) ** 2;
+            if (A.lod) { m.far = show && d2m > (m.far ? 36 * 36 : 42 * 42); const sh = d2m < (A.shOn ? 26 * 26 : 22 * 22); if (sh !== A.shOn && A.casters) { A.shOn = sh; for (const o of A.casters) o.castShadow = sh; } }
+            m.here = show; A.mesh.visible = show && !m.far; if (A.lod) A.lod.visible = show && !!m.far;
+            if (A.trail) A.trail.mesh.visible = A.mesh.visible && A.trail.mesh.visible;
             if (m.proxy) { m.proxy.mesh.position.set(st.p[0], st.p[1], st.p[2]); m.proxy.dead = !!(st.f & 4); m.proxy.isGrounded = !!(st.f & 1); m.proxy.isDashing = !!(st.f & 2); }
             if (!show) return;
             const tx = st.p[0] + st.v[0] * age, ty = st.p[1] + (st.f & 1 ? 0 : st.v[1] * age), tz = st.p[2] + st.v[2] * age, p = A.mesh.position;
@@ -473,12 +493,13 @@ window.AxonCoop = (function () {
             }
             const hv = Math.hypot(st.v[0], st.v[2]);
             if (hv > 0.5) { const ry = A.mesh.rotation.y, vx = st.v[0] / hv, vz = st.v[2] / hv; A.localF += (vx * Math.sin(ry) + vz * Math.cos(ry) - A.localF) * k; A.localS += (vx * Math.cos(ry) - vz * Math.sin(ry) - A.localS) * k; }
-            try { window.AxonHero.animate(A, dt, time, hv > 2); } catch (err) { }
+            if (m.far) { A.lod.position.copy(p); A.lod.position.y += hv > 2 && (st.f & 1) ? Math.abs(Math.sin(time * 11)) * 0.12 : 0; A.lod.rotation.y = A.mesh.rotation.y; }   // no rig, no animation
+            else try { window.AxonHero.animate(A, dt, time, hv > 2); } catch (err) { }
         });
         // heroes are solid to each other: mine is pushed out of any teammate it overlaps (every device does the
         // same for its own hero, so both step apart). Two heroes on the very same spot part in fixed directions.
         if (!P.dead && W !== 'x') mates.forEach(m => {
-            const A = m.A; if (!A || !A.mesh.visible) return;
+            const A = m.A; if (!A || !m.here) return;
             const q = A.mesh.position, p = P.mesh.position; if (Math.abs(p.y - q.y) > 1.9) return;
             let dx = p.x - q.x, dz = p.z - q.z, d = Math.hypot(dx, dz); const R = 1.05; if (d >= R) return;
             if (d < 0.03) { const a = N().slot * 2.4 + 0.6; dx = Math.cos(a); dz = Math.sin(a); d = 1; }
@@ -498,14 +519,9 @@ window.AxonCoop = (function () {
             const anyAlive = [...mates.values()].some(m => m.st && m.st.w === 'm' && !(m.st.f & 4) && now - m.rx < 5000);
             if (!anyAlive && !overSent) { overSent = true; N().broadcast({ t: 'over' }); C.endGame('over'); }
         }
-        // whoever reaches a new stage pulls the team along
+        // (a hero is no longer dragged to whoever walks ahead: that threw people onto door sills and felt random.
+        //  The team is gathered only when it must be — an arena locking down, the guardian waking — see onArena / bossStarted.)
         if (pullCd > 0) pullCd -= dt;
-        if (W === 'm' && C.getState() === 'play' && !P.dead && (followT -= dt) <= 0 && pullCd <= 0) {
-            followT = 0.5;
-            const mine = myStage(); let lead = null;
-            mates.forEach((m, slot) => { const st = m.st; if (st && st.w === 'm' && !(st.f & 4) && now - m.rx < 3000 && st.sg > mine && (!lead || st.sg > lead.st.sg)) lead = { st, slot }; });
-            if (lead && lead.st.f & 1) pullTo(lead.st.p[0] + (Math.random() - 0.5) * 3, lead.st.p[1], lead.st.p[2] + 2.5, lead.slot);
-        }
     }
 
     // ---------- start-up (game.js, once the world exists) ----------
@@ -533,9 +549,10 @@ window.AxonCoop = (function () {
     return {
         seeded, wrapEnemy, reward, init, tick, tickEnemy, team, fx, died, deployed, goto, block, bossStarted, where,
         // teammates standing in my world right now (their avatars): doors and gates open for them too
-        heroes() { const out = []; if (C && on()) mates.forEach(m => { if (m.A && m.A.mesh.visible) out.push(m.A.mesh.position); }); return out; },
-        nearAny(x, z, r2) { if (!C || !on()) return false; let hit = false; mates.forEach(m => { if (!hit && m.A && m.A.mesh.visible) { const q = m.A.mesh.position; hit = (q.x - x) ** 2 + (q.z - z) ** 2 < r2; } }); return hit; },
+        heroes() { const out = []; if (C && on()) mates.forEach(m => { if (m.A && m.here) out.push(m.A.mesh.position); }); return out; },
+        nearAny(x, z, r2) { if (!C || !on()) return false; let hit = false; mates.forEach(m => { if (!hit && m.A && m.here) { const q = m.A.mesh.position; hit = (q.x - x) ** 2 + (q.z - z) ** 2 < r2; } }); return hit; },
         get on() { return on(); },
+        send(m) { if (!on()) return; if (host()) N().broadcast(Object.assign({ id: 0 }, m)); else N().send(m); },
         get guest() { return guest(); },
         // pause / shop / tips don't stop a shared world: it keeps running (the hero just stands still)
         bg: (state, resumeTo) => on() && (state === 'pause' || state === 'shop' || state === 'tips') && resumeTo === 'play',

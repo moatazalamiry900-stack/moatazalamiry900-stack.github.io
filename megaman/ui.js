@@ -14,7 +14,8 @@ window.AxonCheats = (function () {
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
     return {
         get unlocked() { return !!st.ok; },
-        on: k => !!(st.ok && st[k]),
+        // in a co-op room the host's switch rules for everyone (net.js): on = no damage + endless energy for all, off = no cheats for anyone
+        on: k => { const N = window.AxonNet; if (N && N.on) return k !== 'money' && !!N.cheats; return !!(st.ok && st[k]); },
         tryPass(v) { if (String(v).trim().toLowerCase() !== PASS) return false; st.ok = true; save(); return true; },
         toggle(k) { if (!st.ok || !(k in st) || k === 'ok') return; st[k] = !st[k]; save(); if (window.AxonShop && window.AxonShop.refresh) window.AxonShop.refresh(); }
     };

@@ -444,7 +444,7 @@ window.AxonLevel = (function () {
     // each floor has its own two colours (lights, trims, signs) and its own air: [main, accent]
     const THEME = [[0x39d7ff, 0xffa826], [0xff2a9d, 0x39d7ff], [0xffa826, 0xff2a6d], [0x8f6bff, 0x5cf0a0], [0x2fd6c3, 0xff7a2a], [0xff3a4a, 0xffe066], [0x9dff3a, 0x8f6bff], [0xcfe8ff, 0xff2a9d], [0xff2a6d, 0xffc24a]];
     function generate(api) {
-        const B = api.createFacilityBlock, zones = [], arenas = [], traps = [];
+        const B = api.createFacilityBlock, zones = [], arenas = [], traps = []; if (window.AxonLook) window.AxonLook.cur = 0;
         // ---- GAUNTLET: between two sectors, a pit crossed on staggered platforms, with timed spike
         //      poppers on some platforms and a spiked roller sweeping the landing. Falling in costs HP
         //      and drops you back at the start ledge. 44 m long, same height at both ends. ----
@@ -468,12 +468,14 @@ window.AxonLevel = (function () {
             return window.AxonPerf.mergeGeometries(parts);
         })();
         const popper = (x, z, top, w, d, off, lvl) => {
+            if (window.AxonToys) return window.AxonToys.pad(api, x, top, z, w, d);            // a bounce pad where the spike bed was (toys.js)
             const mesh = new THREE.Mesh(spikeField(w, d), spikeMat); mesh.position.set(x, top - 0.8, z); mesh.castShadow = true; api.scene.add(mesh);
             const pm = new THREE.MeshStandardMaterial({ color: 0x2a0a10, emissive: 0xff1a33, emissiveIntensity: 0.25, metalness: 0.5, roughness: 0.4 });
             const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, d), pm); plate.position.set(x, top + 0.02, z); api.scene.add(plate);
             traps.push({ kind: 'pop', x, z, w, d, top, off, mesh, pm, lvl, cd: 0 });
         };
         const roller = (z, top, off, lvl) => {
+            if (window.AxonToys) return;                                                       // no spiked rollers any more
             const g = new THREE.Group(); g.position.set(0, top, z); api.scene.add(g);
             const core = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.9, 0.5), coreMat); core.position.y = 0.45; g.add(core);
             const sp = new THREE.Mesh(rollerSpikes, spikeMat); g.add(sp); g.traverse(o => { if (o.isMesh) o.castShadow = true; });
@@ -565,7 +567,7 @@ window.AxonLevel = (function () {
         zones.push({ kind: 'start', x0: -15, x1: 15, z0: 15, z1: -15, y: 0, stage: 0 });
         let zc = -15, h = 0, bossEntryZ = 0, bossCenter = null, bossHalf = 0, bossY = 0;
         for (let i = 0; i < STAGES; i++) {
-            const [col, acc] = THEME[i % THEME.length], last = i === STAGES - 1;
+            const [col, acc] = THEME[i % THEME.length], last = i === STAGES - 1; if (window.AxonLook) window.AxonLook.cur = i;
             gate(zc, h, col); zc -= 1;
             // between the arenas: a plain corridor with a staircase, or one of the chambers of sectors.js
             // (Z-hall with stairs across the building, ladder shaft, tower) — mirrored on its second visit
@@ -619,6 +621,7 @@ window.AxonLevel = (function () {
             zc -= aS;
             if (!last) { gate(zc, h, acc); zc -= 1; zc -= gauntlet(zc, h, i, col, acc); }   // exit frame → gauntlet → next corridor's gate
         }
+        if (window.AxonLook) window.AxonLook.cur = -1;
         return { zones, arenas, traps, stages: STAGES, startZ: 0, endZ: zc, top: h, bossEntryZ, bossCenter, bossHalf, bossY };
     }
 
@@ -953,7 +956,7 @@ window.AxonLevel = (function () {
             if (api.onArena) api.onArena(layout.arenas.indexOf(a), a.state);
         }
         const ORDER = ['idle', 'wave1', 'wave2', 'clear'];
-        return {
+        return window.AxonArenaDir = {
             // co-op guest: walk an arena forward to the host's state (each missing step in order)
             force(i, to) {
                 const a = layout.arenas[i]; if (!a) return;
@@ -1004,19 +1007,23 @@ window.AxonLevel = (function () {
     // spiked rollers sweeping across the landing (jump them), and the pits (fall = damage + back to the ledge).
     // ---------------------------------------------------------------
     function makeTraps(api, layout) {
-        let t = 0, zi = 0; const fogBase = new THREE.Color(0x3a1e12), fogTo = new THREE.Color(0x3a1e12), fogC = new THREE.Color();   // the facility's own air: a warm rust haze, not the HQ's navy
+        let t = 0, zi = 0; const fogBase = new THREE.Color(0x120e16), fogTo = new THREE.Color(0x120e16), fogC = new THREE.Color();   // the facility's own air: a warm rust haze, not the HQ's navy
         let lit = false;
         return {
             update(player, dt) {
                 t += dt;
-                if (!lit) { lit = true; const hm = api.scene.children.find(o => o.isHemisphereLight); if (hm) { hm.color.setHex(0xffd9b0); hm.groundColor.setHex(0x3a2214); hm.intensity = 0.95; } api.scene.children.forEach(o => { if (o.isAmbientLight) o.color.setHex(0x4a3020); else if (o.isDirectionalLight) o.color.setHex(0xffe0b8); }); }   // warm light instead of the HQ's blue
+                if (!lit) { lit = true; if (window.AxonLook) window.AxonLook.dress(api, layout); const hm = api.scene.children.find(o => o.isHemisphereLight); if (hm) { hm.color.setHex(0xdfe6ff); hm.groundColor.setHex(0x2a2030); hm.intensity = 0.9; } api.scene.children.forEach(o => { if (o.isAmbientLight) o.color.setHex(0x343040); else if (o.isDirectionalLight) o.color.setHex(0xfff2dc); }); }   // warm light instead of the HQ's blue
                 const p = player.mesh.position, Z = layout.zones;
                 if (window.AxonSectors) window.AxonSectors.settle(api, p, dt);
                 if (window.AxonFoes) window.AxonFoes.tick(api, player, dt);                        // wreckage, telegraphs, contact shadows (foes.js)
                 if (window.AxonPolish) window.AxonPolish.tick(api, player, layout, dt);          // mission card, area banners, results (polish.js)
+                if (window.AxonPower) window.AxonPower.tick(api, player, layout, dt);                // power crystals (power.js)
+                if (window.AxonChase) window.AxonChase.tick(api, player, layout, dt);
+                if (window.AxonRiddle) window.AxonRiddle.tick(api, player, layout, dt);
+                if (window.AxonToys) window.AxonToys.tick(api, player, layout, dt);                  // bounce pads, volatile crystals, vortex pylons, chandeliers (toys.js)              // the eye doors (riddle.js)                // the surge run (chase.js)
                 if (window.AxonComm) window.AxonComm.tick(api, player, layout, dt);              // Kendel on the radio (comm.js)                 // gravity for walkers, enemies keep apart
                 while (zi < Z.length - 1 && p.z < Z[zi].z1) zi++; while (zi > 0 && p.z > Z[zi].z0) zi--;
-                const st = Z[zi].stage; if (st) fogTo.copy(fogBase).lerp(fogC.setHex(THEME[(st - 1) % THEME.length][Z[zi].kind === 'gauntlet' ? 1 : 0]), 0.12); else fogTo.copy(fogBase);
+                const st = Z[zi].stage; if (st) fogTo.copy(fogBase).lerp(fogC.setHex(THEME[(st - 1) % THEME.length][Z[zi].kind === 'gauntlet' ? 1 : 0]), 0.2); else fogTo.copy(fogBase);
                 api.scene.fog.color.lerp(fogTo, Math.min(1, dt * 1.5)); if (api.scene.background && api.scene.background.isColor) api.scene.background.copy(api.scene.fog.color);
                 for (const tr of layout.traps) {
                     if (tr.cd > 0) tr.cd -= dt;
@@ -1040,7 +1047,7 @@ window.AxonLevel = (function () {
                     else if (tr.kind === 'pit') {
                         if (!tr.told && p.z < tr.z0 + 8 && p.z > tr.z1 && Math.abs(p.y - tr.y - 3) < 3) { tr.told = true; if (api.tip) api.tip('traps'); }
                         if (!player.dead && p.z < tr.z0 + 1 && p.z > tr.z1 - 1 && p.x > tr.x0 && p.x < tr.x1 && p.y < tr.h - 6) {
-                            player.shieldT = 0; player.takeDamage(99999, true);        // fell into the abyss: that's the run
+                            player.takeDamage(15, true); p.set(0, tr.h + 0.4, tr.z0 + 4); player.velocity.set(0, 0, 0); if (player.lastSafePos) player.lastSafePos.copy(p);   // fell into the pit: a scratch, and back on the ledge
                         }
                         // walkers never step off into the pit (they don't fall): keep them on the ledges
                         for (const e of api.enemies) {

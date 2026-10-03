@@ -301,7 +301,7 @@ async function initCyberGame() {
     let killCount = 0;
 
     const api = {
-        THREE, scene, rand, spotBlocked, moveBody, enemies, enemyShots, orbGeo, orbMat, orbHaloMat, AudioSys, orbMesh: () => { PERF.mark('enemy shot'); return SHOTS.enemyMesh(); },
+        THREE, scene, renderer, rand, spotBlocked, moveBody, enemies, enemyShots, orbGeo, orbMat, orbHaloMat, AudioSys, orbMesh: () => { PERF.mark('enemy shot'); return SHOTS.enemyMesh(); },
         spawnFlash: (...a) => spawnFlash(...a), spawnSparks: (...a) => spawnSparks(...a), spawnShockwave: (...a) => spawnShockwave(...a),
         createFacilityBlock, decorStrip, arenaEmblem, solids, freeSpot, toast: m => toast(m), tip: id => UI.tip(id), playerPos: () => player.mesh.position,
         shake: a => cameraSystem.shake(a), hitStop: t => { hitStop = Math.max(hitStop, t); },
@@ -314,7 +314,7 @@ async function initCyberGame() {
 
     // ==========================================
     // ==========================================
-    const projectiles = [], meleeHitboxes = [];
+    const projectiles = [], meleeHitboxes = []; api.hb = meleeHitboxes; api.pj = projectiles;
     // a stable copy of a list that may shrink while we walk it (enemies dying), without a new array every step
     const _eA = [], _eB = []; let _eFlip = false;
     const eList = L => { const o = (_eFlip = !_eFlip) ? _eA : _eB; o.length = 0; for (let i = 0; i < L.length; i++) o.push(L[i]); return o; };
@@ -1297,7 +1297,7 @@ async function initCyberGame() {
         if (kind === 'over' && runSnap && !out) {
             runLost = Math.max(0, window.AxonShop.wallet - JSON.parse(runSnap.shop).credits);
             window.AxonShop.restore(runSnap.shop);
-            try { if (runSnap.ck) localStorage.setItem('axon.ckpt', runSnap.ck); else localStorage.removeItem('axon.ckpt'); } catch (e) { }
+            if (!MP.on) try { if (runSnap.ck) localStorage.setItem('axon.ckpt', runSnap.ck); else localStorage.removeItem('axon.ckpt'); } catch (e) { }
         }
         state = kind; showOverlay(kind, out);
         if (kind === 'clear') { AudioSys.playCharge(); hub.cleared(0); arenaDir.reset(); }
