@@ -69,7 +69,7 @@ async function initCyberGame() {
     const BAL = {
         shot: { dmg: 10, cost: 4, cool: 0.16 }, mid: { dmg: 24, cost: 10 }, big: { dmg: 48, cost: 22 },
         dashCost: 20, regen: 18, regenDelay: 0.9, hurtInvuln: 0.8,
-        touch: { drone: 7, runner: 9, heavy: 15 }, lvlDmg: 0.1
+        touch: { drone: 5, runner: 6, heavy: 10 }, lvlDmg: 0.05
     };
 
     // ==========================================

@@ -333,7 +333,7 @@ window.AxonLevel = (function () {
                         if (this.slamT <= 0) {
                             this.armL.position.y = this.armR.position.y = 0.55;
                             api.spawnShockwave(_v2.copy(P).setY(P.y + 0.1), 0xff7a2a, 7); api.shake(0.45); api.AudioSys.playExplode();
-                            if (dist < 6.5 && player.isGrounded && playerPos.y < P.y + 1) player.takeDamage(Math.round(16 * (1 + 0.1 * this.lvl)));
+                            if (dist < 6.5 && player.isGrounded && playerPos.y < P.y + 1) player.takeDamage(Math.round(11 * (1 + 0.05 * this.lvl)));
                         }
                     }
                 }
@@ -395,7 +395,7 @@ window.AxonLevel = (function () {
                 if (spread) dir.applyAxisAngle(_up, spread);
                 const m = api.orbMesh();                                     // pooled orb (shots.js)
                 m.position.copy(from).addScaledVector(dir, 1.4);
-                api.scene.add(m); api.enemyShots.push({ mesh: m, dir, life: 3, dmg: Math.round(7 * (1 + 0.1 * this.lvl)) });
+                api.scene.add(m); api.enemyShots.push({ mesh: m, dir, life: 3, dmg: Math.round(5 * (1 + 0.05 * this.lvl)) });
                 api.AudioSys.playEnemyShot(...where(from));
             }
 
@@ -590,6 +590,7 @@ window.AxonLevel = (function () {
             // arena (the last one is the boss chamber)
             const aS = last ? 84 : 60 + i * 4, aC = zc - aS / 2, half = aS / 2;
             B(0, h - 2, aC, aS, 4, aS, true);
+            B(0, h - 2, zc + 0.5, 12, 4, 1, true); if (!last) B(0, h - 2, zc - aS - 0.5, 12, 4, 1, true);   // the sill under each doorway (there was a 1 m slot with no floor: heroes fell through it)
             B(-(half + 1), h + 15, aC, 2, 38, aS); B(half + 1, h + 15, aC, 2, 38, aS);
             [zc + 1, zc - aS].forEach(zE => [-1, 1].forEach(s => { const w = half + 2 - 10; B(s * (10 + w / 2), h + 15, zE, w, 38, 2); }));
             if (last) B(0, h + 15, zc - aS, 20, 38, 2);                              // boss chamber is sealed at the far end
@@ -703,7 +704,7 @@ window.AxonLevel = (function () {
                         const ang = (k / (n - 1) - 0.5) * spread;
                         const dir = base.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).normalize();
                         const m = api.orbMesh(); m.scale.setScalar(1.05);
-                        m.position.copy(from); api.scene.add(m); api.enemyShots.push({ mesh: m, dir, life: 3.5, dmg: 8 });
+                        m.position.copy(from); api.scene.add(m); api.enemyShots.push({ mesh: m, dir, life: 3.5, dmg: 6 });
                     }
                     api.spawnFlash(from, 0xff4a7a, 1.4, 0.12); g.position.z = -0.5;                     // the cannon kicks back
                 });
@@ -777,7 +778,7 @@ window.AxonLevel = (function () {
                             this.vel.set(this.chargeDir.x * 30 * fast, 0, this.chargeDir.z * 30 * fast);
                             const res = api.moveBody(P, this.vel, dt, this.body.r, 0, this.body.h, 0.3, false);
                             if (Math.random() < 0.5) api.spawnSparks(P.clone().setY(P.y + 0.3), 0xff9a3c, 2, 6);
-                            if (!this.rushHit && dist < 3.6 && Math.abs(pp.y - P.y) < 3) { this.rushHit = true; player.takeDamage(18); }
+                            if (!this.rushHit && dist < 3.6 && Math.abs(pp.y - P.y) < 3) { this.rushHit = true; player.takeDamage(14); }
                             if (res.blocked) { api.shake(0.5); this.t = tele + 0.8; }
                         } else if (this.t > tele + 1.3) { this.rushHit = false; this.endAttack(); }
                         break;
@@ -803,7 +804,7 @@ window.AxonLevel = (function () {
                 const aim = Math.max(-0.5, Math.min(0.6, Math.atan2(P.y + 4.55 - (pp.y + 1.4), Math.max(5, dist))));
                 for (const g of this.arms) { g.rotation.x += (aim - g.rotation.x) * e; g.position.z += (0 - g.position.z) * Math.min(1, dt * 9); }
                 // body contact
-                if (dist < 3.2 && Math.abs(pp.y - P.y) < 4 && this.state !== 'charge') player.takeDamage(10);
+                if (dist < 3.2 && Math.abs(pp.y - P.y) < 4 && this.state !== 'charge') player.takeDamage(8);
             }
             endAttack() { this.state = 'idle'; this.t = 0; this.cool = (this.phase === 2 ? 1.4 : 2.2) + Math.random(); this.warn.material.opacity = 0; }
             warnAt(p, r, k) { this.warn.position.set(p.x, p.y + 0.06, p.z); this.warn.scale.setScalar(r); this.warn.material.opacity = 0.25 + 0.6 * Math.abs(Math.sin(k * 12)); }
@@ -821,7 +822,7 @@ window.AxonLevel = (function () {
                     const k = s.r / s.max; s.m.material.opacity = 0.9 * (1 - k); s.wall.material.opacity = 0.35 * (1 - k);
                     const pp = player.mesh.position, dd = Math.hypot(pp.x - s.c.x, pp.z - s.c.z);
                     // the ring is low: jumping over it or dashing through it avoids the hit
-                    if (!s.hit && Math.abs(dd - s.r) < 0.9 && pp.y - s.c.y < 0.9) { s.hit = true; player.takeDamage(16); }
+                    if (!s.hit && Math.abs(dd - s.r) < 0.9 && pp.y - s.c.y < 0.9) { s.hit = true; player.takeDamage(12); }
                     if (s.r >= s.max) { api.scene.remove(s.m); api.scene.remove(s.wall); this.shocks.splice(i, 1); }
                 }
             }
@@ -1027,12 +1028,12 @@ window.AxonLevel = (function () {
                         if (up && !tr.was && Math.abs(p.z - tr.z) < 25) api.AudioSys.playTone('square', 340, 90, 0.08, 0.04);
                         tr.was = up;
                         if (up && tr.cd <= 0 && Math.abs(p.x - tr.x) < tr.w / 2 + 0.3 && Math.abs(p.z - tr.z) < tr.d / 2 + 0.3 && p.y < tr.top + 0.8 && p.y > tr.top - 0.6) {
-                            tr.cd = 0.6; player.takeDamage(Math.round(22 * (1 + 0.1 * tr.lvl))); player.velocity.y = 14;
+                            tr.cd = 0.6; player.takeDamage(Math.round(16 * (1 + 0.05 * tr.lvl))); player.velocity.y = 14;
                         }
                     } else if (tr.kind === 'roll') {
                         const x = Math.sin((t + tr.off) * rollerSpeed(tr.lvl)) * 5.6; tr.mesh.position.x = x;
                         if (tr.cd <= 0 && Math.abs(p.x - x) < 1.5 && Math.abs(p.z - tr.z) < 0.95 && p.y < tr.top + 1.1 && p.y > tr.top - 0.6) {
-                            tr.cd = 0.6; player.takeDamage(Math.round(24 * (1 + 0.1 * tr.lvl))); player.velocity.y = 12; p.z += p.z > tr.z ? 1.2 : -1.2;
+                            tr.cd = 0.6; player.takeDamage(Math.round(17 * (1 + 0.05 * tr.lvl))); player.velocity.y = 12; p.z += p.z > tr.z ? 1.2 : -1.2;
                         }
                     } else if (tr.kind === 'eye') window.AxonSectors.eye(tr, player, dt, api);
                     else if (tr.kind === 'ladder') { window.AxonSectors.climb(tr, player, dt); if (tr.on && (tr.s = (tr.s || 0) - dt) <= 0) { tr.s = 0.24; api.AudioSys.playTone('square', 520, 40, 0.05, 0.03); } }

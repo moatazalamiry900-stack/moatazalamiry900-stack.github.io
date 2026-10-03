@@ -153,7 +153,7 @@ window.AxonComm = (function () {
         stage().appendChild(catcher); stage().appendChild(el);
         const tap = e => { if (!cur) return; e.preventDefault(); e.stopPropagation(); if (cur.c < cur.txt.length) { cur.c = cur.txt.length; el.querySelector('.tx').textContent = cur.txt; el.classList.add('full'); } else cur.w = 99; };   // first tap: the whole line at once (it used to stay cut where the typing was)
         catcher.addEventListener('pointerdown', tap); el.addEventListener('pointerdown', tap);
-        window.addEventListener('keydown', e => { if (cur && (e.code === 'Enter' || e.code === 'Space')) tap(e); }, true);
+        window.addEventListener('keydown', e => { if (cur && !live && (e.code === 'Enter' || e.code === 'Space')) tap(e); }, true);
     }
     function say(id, urgent) {
         if (said[id]) return; said[id] = 1;
@@ -194,9 +194,12 @@ window.AxonComm = (function () {
         if (!hold && !running && !cur && Q.length) { cur = { id: Q.shift().id, k: 0, gap: 0 }; open(); }
     }
     const held = () => { const st = stage().classList; return st.contains('modal-on') || st.contains('boss-intro') || st.contains('winner-on'); };
+    let live = false;
     function open() {
-        frozen = !!(window.AxonUI && window.AxonUI.freeze && window.AxonUI.freeze(true));
-        catcher.classList.add('on'); stage().classList.add('comm-on'); window.AxonSfx.open(); line(apiRef); running = true; prevT = performance.now(); requestAnimationFrame(run);
+        // co-op: a shared world cannot stop, so she talks over the fight (no pause, no tap screen — the hero keeps full control)
+        live = !!(window.AxonCoop && window.AxonCoop.on);
+        frozen = !live && !!(window.AxonUI && window.AxonUI.freeze && window.AxonUI.freeze(true));
+        if (!live) catcher.classList.add('on'); stage().classList.add('comm-on'); window.AxonSfx.open(); line(apiRef); running = true; prevT = performance.now(); requestAnimationFrame(run);
     }
     function close() {
         window.AxonSfx.close(); running = false; cur = null; el.classList.remove('in', 'full'); catcher.classList.remove('on'); stage().classList.remove('comm-on'); setTimeout(() => { if (!cur) el.classList.remove('on'); }, 240);

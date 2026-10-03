@@ -218,17 +218,18 @@ window.AxonCoop = (function () {
         for (let i = 0; i < E.length; i += 7) {
             const nid = E[i], e = reg.get(nid); here.add(nid);
             if (!e || e.isDead) continue;
-            if (e.dormant) { e.dormant = false; e.mesh.visible = true; if (!C.api.enemies.includes(e)) C.api.enemies.push(e); }
-            if (!C.api.enemies.includes(e)) C.api.enemies.push(e);
+            if (e.dormant) { e.dormant = false; e.mesh.visible = true; e._in = false; }
+            if (!e._in) { e._in = true; if (!C.api.enemies.includes(e)) C.api.enemies.push(e); }
             if (!e._t) { e._t = {}; e.mesh.position.set(E[i + 1], E[i + 2], E[i + 3]); }
-            const T = e._t, now = performance.now(), gap = T.at ? Math.max(30, now - T.at) / 1000 : 0;
-            T.vx = gap ? (E[i + 1] - T.x) / gap : 0; T.vz = gap ? (E[i + 3] - T.z) / gap : 0; T.at = now;   // its speed, to run slightly ahead between snapshots
+            const T = e._t, now = performance.now(), gap = T.at ? Math.max(70, now - T.at) / 1000 : 0;   // packets arrive in bunches: never read a bunch as a burst of speed
+            if (gap) { let vx = (E[i + 1] - T.x) / gap, vz = (E[i + 3] - T.z) / gap; const sp = Math.hypot(vx, vz); if (sp > 14) { vx *= 14 / sp; vz *= 14 / sp; } T.vx = (T.vx || 0) * 0.5 + vx * 0.5; T.vz = (T.vz || 0) * 0.5 + vz * 0.5; } else { T.vx = 0; T.vz = 0; }
+            T.at = now;   // its speed, to run slightly ahead between snapshots
             T.x = E[i + 1]; T.y = E[i + 2]; T.z = E[i + 3]; T.r = E[i + 4]; e.hp = Math.max(0.01, E[i + 5]); e._f = E[i + 6];
         }
         // missing from the host's list for a good while (a kill message lost, or never there) → gone here too.
         // Reinforcements appear one by one over ~1.5 s, so a short absence means nothing.
         const now = performance.now();
-        C.api.enemies.slice().forEach(e => {
+        if (m.f) C.api.enemies.slice().forEach(e => {
             if (e.type === 'boss' || e.isDead || here.has(e.nid)) { e._miss = 0; return; }
             if (!e._miss) e._miss = now; else if (now - e._miss > 3000) { e._killer = -1; e.die(); }
         });
@@ -239,7 +240,7 @@ window.AxonCoop = (function () {
             if (!B.isDead) B.hp = Math.max(0.01, b[4]);
             B.phase = b[5]; B._warn = [b[8], b[9], b[10], b[11]];
         }
-        if (m.a) [...m.a].forEach((c, i) => C.arenaDir.force(i, ARENA[+c]));
+        if (m.a && m.a !== gotA) { gotA = m.a; [...m.a].forEach((c, i) => C.arenaDir.force(i, ARENA[+c])); }
     }
     const ARENA = ['idle', 'wave1', 'wave2', 'clear'];
     function killed(m) {
@@ -388,21 +389,26 @@ window.AxonCoop = (function () {
     }
 
     // ---------- host snapshot ----------
+    let fullT = 0, lastA = '', gotA = '';
     function sendSnapshot() {
-        const E = [];
+        // lighter traffic = fewer hitches: 12×/s only the enemies near a hero travel; the whole list goes once a second
+        const E = [], full = ++fullT % 12 === 0, T = full ? null : team(C.player);
         for (const e of C.api.enemies) {
             if (e.type === 'boss' || e.isDead || e.dormant) continue;
+            if (T) { const q = e.mesh.position; let near = false; for (let i = 0; i < T.length && !near; i++) { const h = T[i].mesh.position; near = (h.x - q.x) ** 2 + (h.z - q.z) ** 2 < 8100; } if (!near) continue; }
             const p = e.mesh.position, f = (e.mode === 'alert' ? 1 : 0) | (e.mode === 'search' ? 2 : 0) | (e.flash > 0.15 ? 4 : 0);
             E.push(e.nid, r2(p.x), r2(p.y), r2(p.z), r2(e.mesh.rotation.y), Math.round(e.hp), f);
         }
         const B = C.boss, bp = B.mesh.position;
         const b = [r2(bp.x), r2(bp.y), r2(bp.z), r2(B.mesh.rotation.y), Math.round(B.hp), B.phase, r2(B.root.position.y), r2(B.root.position.x),
             r2(B.warn.material.opacity), r2(B.warn.position.x), r2(B.warn.position.z), r2(B.warn.scale.x), B.active ? 1 : 0];
-        N().broadcast({ t: 'S', e: E, b, a: C.layout.arenas.map(x => ARENA.indexOf(x.state)).join('') });
+        const m = { t: 'S', e: E, b }, a = C.layout.arenas.map(x => ARENA.indexOf(x.state)).join('');
+        if (full) { m.f = 1; m.a = a; } else if (a !== lastA) m.a = a; lastA = a;
+        N().broadcast(m);
     }
 
     // ---------- team bar ----------
-    let teamEl = null;
+    let teamEl = null, teamHtml = '';
     function drawTeam() {
         if (!on()) { if (teamEl) teamEl.hidden = true; return; }
         if (!teamEl) {
@@ -418,11 +424,12 @@ window.AxonCoop = (function () {
         }
         teamEl.hidden = false;
         const col = s => '#' + (N().COLORS[s] || 0xffffff).toString(16).padStart(6, '0');
-        teamEl.innerHTML = [...mates.entries()].sort((a, b) => a[0] - b[0]).map(([slot, m]) => {
+        const html = [...mates.entries()].sort((a, b) => a[0] - b[0]).map(([slot, m]) => {
             const st = m.st, hp = st ? Math.max(0, st.hp) / (st.mh || 100) : 0, away = !st || st.w !== where();
             const nm = String(N().nameOf(slot)).replace(/[<>&"]/g, '');
-            return `<div class="tm${st && (st.f & 4) ? ' down' : ''}${away ? ' away' : ''}" style="--c:${col(slot)}"><b>${nm}</b><i><u style="transform:scaleX(${hp.toFixed(3)})"></u></i></div>`;
+            return `<div class="tm${st && (st.f & 4) ? ' down' : ''}${away ? ' away' : ''}" style="--c:${col(slot)}"><b>${nm}</b><i><u style="transform:scaleX(${hp.toFixed(2)})"></u></i></div>`;
         }).join('');
+        if (html !== teamHtml) teamEl.innerHTML = teamHtml = html;                 // rebuilding it 4×/s for nothing cost a hitch on phones
     }
 
     // ---------- every frame (game.js main loop) ----------
@@ -479,7 +486,7 @@ window.AxonCoop = (function () {
             try { C.api.moveBody(p, _pv, dt, (P.body && P.body.r) || 0.5, 0, (P.body && P.body.h) || 2.6, 0.45, false); } catch (e) { }
         });
         // arriving somewhere together (the HQ, a mission, a restart): each slot steps to its own place
-        if (W !== lastW) { lastW = W; if (W !== 'x' && N().slot > 0 && !P.dead) { const o = SPOT[N().slot % 4], p = P.mesh.position; p.x += o[0]; p.z += o[1]; if (C.api.freeSpot) C.api.freeSpot(p); if (P.lastSafePos) P.lastSafePos.copy(p); } }
+        if (W !== lastW) { lastW = W; gotA = ''; if (W !== 'x' && N().slot > 0 && !P.dead) { const o = SPOT[N().slot % 4], p = P.mesh.position; p.x += o[0]; p.z += o[1]; if (C.api.freeSpot) C.api.freeSpot(p); if (P.lastSafePos) P.lastSafePos.copy(p); } }
         if ((teamT -= dt) <= 0) { teamT = 0.25; drawTeam(); }
         // revive / team over
         if (reviveT > 0 && (reviveT -= dt) <= 0) { if (P.dead && W === 'm') revive(); }
