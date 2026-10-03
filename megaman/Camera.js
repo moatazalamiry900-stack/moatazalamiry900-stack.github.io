@@ -80,9 +80,14 @@ window.AxonCamera = (function () {
                 const turnRate = hard ? 3.5 : 2.2;
                 if (!this.dragging && this.manualTimer <= 0) {
                     const d = target ? _C.c1.subVectors(target.mesh.position, player.mesh.position) : null;
-                    if (d && Math.hypot(d.x, d.z) > 2.5) {
-                        let diff = Math.atan2(d.x, d.z) + Math.PI - this.targetTheta; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-                        this.targetTheta += diff * Math.min(1, turnRate * dt); this.targetPhi = THREE.MathUtils.lerp(this.targetPhi, Math.PI / 8, 3 * dt);
+                    if (d) {
+                        const h = Math.hypot(d.x, d.z);
+                        if (h > 2.5) { let diff = Math.atan2(d.x, d.z) + Math.PI - this.targetTheta; diff = Math.atan2(Math.sin(diff), Math.cos(diff)); this.targetTheta += diff * Math.min(1, turnRate * dt); }
+                        // pitch follows the target's height: an enemy above (a drone overhead, a gun on a ledge) drops the camera low
+                        // so it looks up at it; an enemy below raises it to look down. Level targets keep the usual pitch.
+                        const ty = target.aimPoint(_C.a).y - (player.mesh.position.y + PIVOT_H), elev = Math.atan2(ty, Math.max(h, 3.5));
+                        const band = Math.abs(elev) < 0.12 ? 0 : elev - Math.sign(elev) * 0.12;
+                        this.targetPhi = THREE.MathUtils.lerp(this.targetPhi, clamp(Math.PI / 8 - band * 0.9, -0.32, 1.0), Math.min(1, (hard ? 5 : 3.5) * dt));
                     } else if (!target && move.active && move.y < 0.3) {
                         const v = player.velocity, sp = Math.hypot(v.x, v.z);
                         if (sp > 3) {
@@ -123,7 +128,7 @@ window.AxonCamera = (function () {
                 pushOutOfSolids(this.camera.position, CAM_R);
                 player.setFade(clamp((this.camera.position.distanceTo(head) - 0.7) / 1.1, 0.22, 1));
                 const lo = _C.c6.set(0, 0, 0);
-                if (target) { const tp = target.aimPoint(_C.a); tp.y = clamp(tp.y, head.y - 3, head.y + 3); lo.subVectors(tp, head).multiplyScalar(hard ? 0.2 : 0.12); }
+                if (target) { const tp = target.aimPoint(_C.a); tp.y = clamp(tp.y, head.y - 9, head.y + 9); lo.subVectors(tp, head).multiplyScalar(hard ? 0.2 : 0.12); lo.y = (tp.y - head.y) * (hard ? 0.42 : 0.34); }   // the look point rises / sinks with the target
                 this.lookOff.lerp(lo, Math.min(1, 6 * dt));
                 this.currentLookat.copy(head).add(this.lookOff);
                 if (this.shakeAmt > 0.001) {
@@ -181,3 +186,4 @@ window.AxonCamera = (function () {
     }
     return { make, bindInput };
 })();
+

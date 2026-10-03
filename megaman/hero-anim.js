@@ -14,40 +14,51 @@
     const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
     const FEET = P => P._feet || (P._feet = [P.footL, P.footR]);
 
-    // Blade trail: a ribbon swept by the saber's edge (hilt → tip) for the last ~0.13 s, fading out
-    const TRAIL_N = 22, TRAIL_LIFE = 0.13;
+    // Blade trail: a ribbon swept by the saber's edge (hilt → tip) for the last ~0.26 s. It is drawn solid (its own
+    // transparency, not added light), so the cut reads on any background — a bright sky as well as a dark corridor —
+    // and without the glow pass that phones do not run. Between two frames the blade is interpolated around the hilt,
+    // so a fast cut at a low frame rate is still a smooth arc instead of a few flat facets.
+    const TRAIL_N = 48, TRAIL_LIFE = 0.26, TRAIL_SUB = 3;
     function updateTrail(P, dt) {
         if (!P.trail) {
             if (!P.mesh.parent) return;
             const geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 2 * 3), 3));
-            geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 2 * 3), 3));
+            geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 3 * 3), 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 3 * 4), 4));       // rgba: the 4th value is the opacity
             const idx = [];
-            for (let i = 0; i < TRAIL_N - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+            for (let i = 0; i < TRAIL_N - 1; i++) { const a = i * 3; idx.push(a, a + 1, a + 3, a + 1, a + 4, a + 3, a + 1, a + 2, a + 4, a + 2, a + 5, a + 4); }
             geo.setIndex(idx);
-            const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
-            mesh.frustumCulled = false; P.mesh.parent.add(mesh);
-            P.trail = { mesh, geo, pts: [], free: [] };
+            const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, depthWrite: false, fog: false }));
+            mesh.frustumCulled = false; mesh.renderOrder = 6; P.mesh.parent.add(mesh);
+            P.trail = { mesh, geo, pts: [], free: [], last: null };
         }
         const tr = P.trail;
         tr.pts.forEach(q => { q.age += dt; });
         while (tr.pts.length && tr.pts[0].age > TRAIL_LIFE) tr.free.push(tr.pts.shift());   // recycle points, no garbage
         if (P.slashTimer > 0 && P.sword.visible) {
             P.sword.updateWorldMatrix(true, false);                   // just the arm chain, not all ~100 hero parts
-            const q = tr.free.pop() || { a: new THREE.Vector3(), b: new THREE.Vector3(), age: 0 };
-            P.sword.localToWorld(q.a.set(0, -0.35, 0)); P.sword.localToWorld(q.b.set(0, -2.3, 0)); q.age = 0;
-            tr.pts.push(q);
-            if (tr.pts.length > TRAIL_N) tr.free.push(tr.pts.shift());
-        }
+            const take = () => { const q = tr.free.pop() || { a: new THREE.Vector3(), b: new THREE.Vector3(), age: 0 }; tr.pts.push(q); if (tr.pts.length > TRAIL_N) tr.free.push(tr.pts.shift()); return q; };
+            const A = P.sword.localToWorld(_v.set(0, -0.3, 0)), B = P.sword.localToWorld(_v2.set(0, -2.55, 0)), L = tr.last;
+            if (L && L.age < 0.09) {                                   // in-betweens: hilt in a straight line, blade turned around it at full length
+                const len = A.distanceTo(B), a0 = L.a, b0 = L.b, age0 = L.age;
+                for (let k = 1; k < TRAIL_SUB; k++) {
+                    const u = k / TRAIL_SUB, q = take();
+                    q.a.lerpVectors(a0, A, u); q.b.lerpVectors(b0, B, u).sub(q.a).setLength(len).add(q.a); q.age = age0 * (1 - u);
+                }
+            }
+            const q = take(); q.a.copy(A); q.b.copy(B); q.age = 0; tr.last = q;
+        } else tr.last = null;
         const n = tr.pts.length, pos = tr.geo.attributes.position, col = tr.geo.attributes.color, c = P.mats.glow.color;
         for (let i = 0; i < n; i++) {
-            const q = tr.pts[i], f = Math.max(0, 1 - q.age / TRAIL_LIFE), w = f * f;
-            pos.setXYZ(i * 2, q.a.x, q.a.y, q.a.z); pos.setXYZ(i * 2 + 1, q.b.x, q.b.y, q.b.z);
-            col.setXYZ(i * 2, c.r * w * 0.35, c.g * w * 0.35, c.b * w * 0.35);           // dim at the hilt
-            col.setXYZ(i * 2 + 1, 0.6 * w + c.r * w, 0.6 * w + c.g * w, 0.6 * w + c.b * w); // hot white-gold at the tip
+            const q = tr.pts[i], f = Math.max(0, 1 - q.age / TRAIL_LIFE), w = f * f, k = i * 3;
+            pos.setXYZ(k, q.a.x, q.a.y, q.a.z); pos.setXYZ(k + 2, q.b.x, q.b.y, q.b.z);
+            pos.setXYZ(k + 1, q.a.x + (q.b.x - q.a.x) * 0.62, q.a.y + (q.b.y - q.a.y) * 0.62, q.a.z + (q.b.z - q.a.z) * 0.62);
+            col.setXYZW(k, c.r, c.g, c.b, 0);                                                  // nothing at the hilt
+            col.setXYZW(k + 1, c.r * 0.75 + 0.25, c.g * 0.75 + 0.25, c.b * 0.75 + 0.25, 0.42 * w);   // the blade's colour through the middle
+            col.setXYZW(k + 2, 0.55 + c.r * 0.45, 0.55 + c.g * 0.45, 0.55 + c.b * 0.45, 0.95 * f);   // a hot, nearly white edge at the tip
         }
         pos.needsUpdate = true; col.needsUpdate = true;
-        tr.geo.setDrawRange(0, Math.max(0, n - 1) * 6);
+        tr.geo.setDrawRange(0, Math.max(0, n - 1) * 12);
         tr.mesh.visible = n > 1;
     }
     // ---------- saber on the back ----------
@@ -58,6 +69,10 @@
         const out = { draw: -1, sheath: -1 };
         if (!P.backSaber) return out;
         if (P.slashDur !== P._sd) { P._sd = P.slashDur; P._drawX = 0; }                  // a new cut from game.js
+        if (P.blocking && !(P.slashTimer > 0)) {                                         // saber guard (guard.js): the blade comes off the back first
+            P._idle = 0; if (P._sheathT > 0) P._sheathT = 0;
+            if (!P.drawn && !(P._drawT > 0)) { P._drawT = DRAW; P._grab = false; }
+        }
         if (P.slashTimer > 0) {
             P._idle = 0;
             if (P._sheathT > 0) P._sheathT = 0;                                          // attacking again: stop stowing
@@ -370,6 +385,9 @@
             spinAdd = ease(1 - P.wallJumpT / 0.32) * Math.PI * 2 * (P.slashSide || 1);
             L.hip = -1.1; L.knee = 1.6; R.hip = 0.2; R.knee = 0.6; aL = -1.8; aR = 0.6;
         }
+        if (P.diving && airborne) {                                          // METEOR DIVE (training wing): one knee up, the other leg driving down, arms swept back
+            tLean = 0.3; L.hip = 0.15; L.knee = 0.1; R.hip = -1.3; R.knee = 1.8; aL = 0.95; aR = 0.95; eL = eR = -0.2; zL = -0.35; zR = 0.35; footFlat = 0; flipAdd = 0;
+        }
         if (P.rollT > 0) {                                                   // fast landing → forward roll
             const rp = 1 - P.rollT / 0.4;
             flipAdd = ease(rp) * Math.PI * 2; tY -= 0.75 * Math.sin(rp * Math.PI); tLean = 0.3;
@@ -415,7 +433,7 @@
         if (hol.draw >= 0) reach(hol.draw, false);
         else if (P.slashTimer > 0) {
             const p = clamp(1 - P.slashTimer / ((P.slashDur || 0.28) - (P._drawX || 0)), 0, 1), kind = P.slashKind || 'h1';
-            const W = kind === 'fin' ? 0.34 : kind === 'air' ? 0.05 : 0.2;
+            const W = kind === 'fin' ? 0.34 : kind === 'air' ? 0.05 : kind === 'spin' ? 0.12 : 0.2;
             const wind = p < W, u = wind ? smooth(p / W) : (p - W) / (1 - W), e = 1 - Math.pow(1 - u, 3);
             const step = smooth(p / Math.max(W + 0.25, 0.3));                 // the feet move into the cut, not before it
             const lerp = mix;
@@ -437,6 +455,10 @@
                     aR = lerp(-3.05, -0.2, e); eR = lerp(-0.75, 0, e); tLean = lerp(-0.28, 0.62, e); tY -= 0.34 * e;
                     L.hip = -1.0 * e; L.knee = 1.25 * e; R.hip = 0.8 * e; R.knee = 0.3 + 0.1 * e; aL = lerp(-2.8, 0.8, e); eL = -0.5;
                 }
+            } else if (kind === 'spin') {            // CYCLONE EDGE (training wing): blade held out level, two full turns on bent, planted legs
+                aR = -1.5; aRy = wind ? lerp(0.2, 1.2, u) : lerp(1.2, 0.7, e); aL = 0.9; eL = -0.3; zR = 0.4; eR = -0.05;
+                tY -= 0.16 * (wind ? u : 1); tLean = 0.08; L.hip = -0.5; L.knee = 0.7; R.hip = 0.45; R.knee = 0.6;
+                spinAdd = wind ? 0 : ease(u) * Math.PI * 4;
             } else {                                 // air: spinning cut, legs tucked
                 aR = -1.5; aRy = 0.8; aL = 0.9; eL = -0.3; zR = 0.4;
                 L.hip = R.hip = -1.0; L.knee = R.knee = 1.6; footFlat = 0;
@@ -462,6 +484,13 @@
             aL = clamp(aL, -2.1, -0.45); aLy = clamp(0.95 + 0.3 * sw, 0.5, 1.35); eL = Math.min(eL, -0.25);
             tTwist += 0.22 * sw; cTwist += 0.28 * sw;
             if (P.isGrounded) { tY -= 0.06; L.z -= 0.08; R.z += 0.08; }                // a wider, lower base for a two-handed swing
+        } else if (P.blocking && P.drawn && hol.draw < 0) {
+            // SABER GUARD: side-on behind the blade, which is held up across the body in both hands; knees bent, weight low.
+            // A blocked hit jolts the arms back for a moment (P.guardHit).
+            const jolt = Math.max(0, P.guardHit || 0) / 0.18, br = Math.sin(time * 3.2);
+            tTwist = -0.38; cTwist = -0.26; tLean = 0.1 - 0.12 * jolt; tRoll = 0.03;
+            if (!isMoving) { tY = 1.11 + 0.01 * br; R.hip = -0.6; R.knee = 0.85; L.hip = 0.4; L.knee = 0.62; L.z = -0.12; R.z = 0.12; footFlat = 1; }
+            aL = -1.5 + 0.25 * jolt; aLy = 0.62; eL = -1.15 - 0.2 * jolt; zL = -0.2;
         } else if (guard) {
             // battle stance after a combo: side-on, knees bent, weight low, saber held in both hands at the waist,
             // blade angled forward and down — ready to cut again (until the saber goes back on the back)
@@ -530,7 +559,7 @@
         spr(P, 'erx', P.elbowR.rotation, 'x', Math.min(0, eR), aiming ? 40 : wElb, aiming ? 0.9 : zElb, dt);
         if (P.elbowL.rotation.x > 0) P.elbowL.rotation.x = 0;                // elbows don't hyperextend
         if (P.elbowR.rotation.x > 0) P.elbowR.rotation.x = 0;
-        P._grip = damp(P._grip || 0, cutting || guard ? 1 : 0, cutting ? 26 : 14, dt);
+        P._grip = damp(P._grip || 0, cutting || guard || (P.blocking && P.drawn) ? 1 : 0, cutting ? 26 : 14, dt);
         twoHand(P, P._grip);
         // plant hand and boot on the wall only once he actually faces it (while he is still turning, a planted
         // boot would have to twist the whole leg round)

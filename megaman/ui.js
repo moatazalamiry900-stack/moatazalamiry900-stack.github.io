@@ -5,6 +5,21 @@
 // =====================================================================
 'use strict';
 
+// ---------- cheats: locked until the password is typed into the Cheats panel; each one is an on/off switch ----------
+//   money: purchases cost nothing (shop.js) · hp: no damage · en: energy is never spent (game.js)
+window.AxonCheats = (function () {
+    const KEY = 'axon.cheats', PASS = 'rockmanfan';
+    const st = { ok: false, money: false, hp: false, en: false };
+    try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { }
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
+    return {
+        get unlocked() { return !!st.ok; },
+        on: k => !!(st.ok && st[k]),
+        tryPass(v) { if (String(v).trim().toLowerCase() !== PASS) return false; st.ok = true; save(); return true; },
+        toggle(k) { if (!st.ok || !(k in st) || k === 'ok') return; st[k] = !st[k]; save(); if (window.AxonShop && window.AxonShop.refresh) window.AxonShop.refresh(); }
+    };
+})();
+
 window.AxonUI = (function () {
     const $ = id => document.getElementById(id);
     const I = window.AxonI18n, T = I.t;
@@ -96,6 +111,7 @@ window.AxonUI = (function () {
         retry: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
         hq: '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/>',
         home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+        cheat: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/>',
         team: '<circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.8-3.4 3-5.2 5.5-5.2s4.7 1.8 5.5 5.2M14 14.6c.8-.4 1.6-.6 2.5-.6 2.2 0 4 1.5 4.8 4.6"/>'
     };
     const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>`;
@@ -104,14 +120,14 @@ window.AxonUI = (function () {
         const en = I.lang === 'en' ? '' : `<small>${EN[key] || ''}</small>`;
         return `<button class="mm-btn ${cls}" type="button" data-act="${id}">${ico(icon)}<span><b>${T(key)}</b>${en}</span></button>`;
     };
-    const EN = { coop: 'CO-OP · HOTSPOT', start: 'ENTER HQ', back_hq: 'RETURN TO HQ', character: 'CHARACTER', settings: 'SETTINGS', help: 'HOW TO PLAY', about: 'ABOUT', resume: 'RESUME', restart: 'RESTART', main_menu: 'MAIN MENU' };
+    const EN = { cheats: 'CHEATS', coop: 'CO-OP · ONLINE', start: 'ENTER HQ', back_hq: 'RETURN TO HQ', character: 'CHARACTER', settings: 'SETTINGS', help: 'HOW TO PLAY', about: 'ABOUT', resume: 'RESUME', restart: 'RESTART', main_menu: 'MAIN MENU' };
 
     function renderMenu() {
         const pickOpen = menuEl.querySelector('.mm-pick') && !menuEl.querySelector('.mm-pick').hidden;
         menuEl.innerHTML = `
           <div class="mm-side">
             <div class="mm-brand"><span class="mm-kicker">${T('presents')}</span>
-              <h1>AXON <em>BREACH</em></h1><span class="mm-sub">${T('menu_sub')}</span></div>
+              <h1 class="ax-logo">${window.AxonLogo || 'AXON <em>BREACH</em>'}</h1><span class="mm-sub">${T('menu_sub')}</span></div>
             <nav class="mm-nav">
               ${btn('start', 'play', 'start', 'primary')}
               ${btn('coop', 'team', 'coop')}
@@ -123,6 +139,7 @@ window.AxonUI = (function () {
               ${btn('settings', 'gear', 'settings')}
               ${btn('help', 'help', 'help')}
               ${btn('about', 'info', 'about')}
+              ${btn('cheats', 'cheat', 'cheats')}
             </nav>
             <div class="mm-foot">© ${new Date().getFullYear()} Mtz Games · v1.1</div>
           </div>`;
@@ -154,11 +171,13 @@ window.AxonUI = (function () {
     // ---------- pause ----------
     function renderPause() {
         pauseEl.innerHTML = `<div class="pz-card">
+            <div class="ax-logo pz-logo">${window.AxonLogo || ''}</div>
             <div class="pz-head"><b>${T('paused')}</b><span>${T('paused_sub')}</span></div>
             <nav class="mm-nav">
               ${btn('resume', 'resume', 'resume', 'primary')}
               ${btn('settings', 'gear', 'settings')}
               ${btn('help', 'help', 'help')}
+              ${btn('cheats', 'cheat', 'cheats')}
               ${btn('retry', 'retry', 'restart')}
               ${btn('hq', 'hq', 'back_hq')}
               ${btn('menu', 'home', 'main_menu')}
@@ -205,19 +224,27 @@ window.AxonUI = (function () {
 
     // ---------- panels: settings / help / about ----------
     function panelHTML(kind) {
-        const sub = k => I.lang === 'en' ? '' : ` <small>${{ settings: 'SETTINGS', help: 'HOW TO PLAY', about: 'ABOUT' }[k]}</small>`;
+        const sub = k => I.lang === 'en' ? '' : ` <small>${{ settings: 'SETTINGS', help: 'HOW TO PLAY', about: 'ABOUT', cheats: 'CHEATS' }[k]}</small>`;
         if (kind === 'settings') {
             const row = (id, key) => `<div class="st-row"><span><b>${T(key)}</b></span><button type="button" class="st-val" data-set="${id}"></button></div>`;
             return `<h2>${T('settings')}${sub('settings')}</h2>
               ${row('lang', 'set_lang')}${row('music', 'set_music')}${row('fx', 'set_fx')}${row('bloom', 'set_bloom')}${row('shadow', 'set_shadow')}${row('res', 'set_res')}${row('hero', 'set_hero')}${row('cap', 'set_cap')}${row('fps', 'set_fps')}${row('orient', 'set_orient')}${row('ctl', 'set_ctl')}${row('bench', 'set_bench')}`;
         }
+        if (kind === 'cheats') {   // locked: a password box (it opens by itself once the word is typed) · unlocked: three switches
+            const C = window.AxonCheats;
+            if (!C.unlocked) return `<h2>${T('cheats')}${sub('cheats')}</h2><p class="ch-note">${T('ch_enter')}</p>
+              <input class="ch-pw" type="text" data-cheat-pw autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${T('ch_pass')}" aria-label="${T('ch_pass')}">`;
+            const sw = (id, key) => `<div class="st-row"><span><b>${T(key)}</b></span><button type="button" class="st-val ch-sw ${C.on(id) ? 'on' : ''}" data-cheat="${id}" aria-pressed="${C.on(id)}">${T(C.on(id) ? 'on' : 'off')}</button></div>`;
+            return `<h2>${T('cheats')}${sub('cheats')}</h2><p class="ch-note ok">✓ ${T('ch_ok')}</p>${sw('money', 'ch_money')}${sw('hp', 'ch_hp')}${sw('en', 'ch_en')}`;
+        }
         if (kind === 'ctl') return Ctl.html();
         if (kind === 'help') {
             const rows = ['h_stick', 'h_jump', 'h_dash', 'h_slash', 'h_shot', 'h_lock', 'h_items', 'h_shop', 'h_pause'].map(k => { const [a, b] = T(k); return `<div><b>${a}</b><span>${b}</span></div>`; }).join('');
             return `<h2>${T('help')}${sub('help')}</h2><div class="hp-grid">${rows}</div>
-            <p class="hp-keys">Keyboard: WASD · Space · Shift · J · K · L · 1 2 3 · B · P</p>`;
+            <p class="hp-keys">Keyboard: WASD · Space · Shift · J · K · L · U · I · 1 2 3 · B · P</p>`;
         }
         return `<h2>${T('about')}${sub('about')}</h2>
+            <div class="ax-logo ab-game">${window.AxonLogo || ''}</div>
             <div class="ab-logo">${LOGO_SVG}</div>
             <p>${T('about1')}</p>
             <p class="ab-dim">${T('about2')}</p>`;
@@ -244,6 +271,8 @@ window.AxonUI = (function () {
             api.stage.appendChild(panelEl);
             panelEl.addEventListener('click', e => {
                 if (e.target === panelEl || e.target.closest('.pn-close')) { closePanel(); return; }
+                const ch = e.target.closest('[data-cheat]');
+                if (ch) { window.AxonCheats.toggle(ch.dataset.cheat); api.AudioSys.playLock(); openPanel('cheats'); return; }
                 const s = e.target.closest('[data-set]');
                 if (e.target.closest('[data-ctl-back]')) { openPanel('settings'); return; }
                 if (e.target.closest('[data-ctl-reset]')) { Ctl.reset(); openPanel('ctl'); return; }
@@ -258,7 +287,18 @@ window.AxonUI = (function () {
                     const b = $(map[s.dataset.set]); b && b.click(); setTimeout(syncSettings, 30);
                 }
             });
-            panelEl.addEventListener('input', e => { const r = e.target.closest('[data-ctl]'); if (r) Ctl.input(r); });
+            panelEl.addEventListener('input', e => {
+                const r = e.target.closest('[data-ctl]'); if (r) Ctl.input(r);
+                const pw = e.target.closest('[data-cheat-pw]');
+                if (pw && window.AxonCheats.tryPass(pw.value)) { pw.blur(); api.AudioSys.playChargeFull(); openPanel('cheats'); }   // the right word: the switches appear
+            });
+            // typing in the password box must not reach the game's keyboard controls (W A S D, K…)
+            ['keydown', 'keyup'].forEach(t => panelEl.addEventListener(t, e => { if (e.target.closest('[data-cheat-pw]')) e.stopPropagation(); }));
+            const cs = document.createElement('style');
+            cs.textContent = '.ch-note{margin:0 0 10px;font-size:12px;line-height:1.5;color:var(--dim)}.ch-note.ok{color:#5cf0a0;font-weight:700;letter-spacing:.06em}'
+                + '.ch-pw{width:100%;box-sizing:border-box;padding:12px 14px;font:700 16px var(--font);letter-spacing:.14em;text-align:center;color:var(--ink);background:rgba(255,255,255,.06);border:1px solid rgba(255,168,38,.5);outline:none}'
+                + '.ch-pw:focus{border-color:var(--amber);box-shadow:0 0 0 2px rgba(255,168,38,.25)}.ch-sw.on{color:#06140c;background:#5cf0a0;border-color:#5cf0a0}';
+            document.head.appendChild(cs);
         }
         panelKind = kind;
         panelEl.classList.toggle('ctl', kind === 'ctl');
@@ -275,7 +315,7 @@ window.AxonUI = (function () {
         const KEY = 'axon.ctlSize', MIN = 50, MAX = 160, STEP = 5;
         const ITEMS = [                       // id · label key
             ['all', 'ctl_all'], ['joy', 'ctl_joy'], ['dash', 'b_dash'], ['jump', 'b_jump'], ['shoot', 'b_buster'],
-            ['atk', 'b_saber'], ['lock', 'b_lock'], ['slots', 'ctl_slots'], ['top', 'ctl_top']
+            ['atk', 'b_saber'], ['guard', 'b_guard'], ['lock', 'b_lock'], ['slots', 'ctl_slots'], ['top', 'ctl_top']
         ];
         let v = {};
         try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (d && typeof d === 'object') v = d; } catch (e) { }
@@ -290,7 +330,7 @@ window.AxonUI = (function () {
           html.rtl-text #stage .btn .lbl{font-size:max(9px,calc(var(--S) * .155))}
           html:lang(zh) #stage .btn .lbl,html:lang(ja) #stage .btn .lbl{font-size:max(8px,calc(var(--S) * .14))}
           #stage #btn-dash{--k:var(--ui-dash,1)} #stage #btn-jump{--k:var(--ui-jump,1)} #stage #btn-shoot{--k:var(--ui-shoot,1)}
-          #stage #btn-attack{--k:var(--ui-atk,1)} #stage #btn-lock{--k:var(--ui-lock,1)}
+          #stage #btn-attack{--k:var(--ui-atk,1)} #stage #btn-lock{--k:var(--ui-lock,1)} #stage #btn-guard{--k:var(--ui-guard,1)}
           #stage #pad{grid-template-columns:repeat(3,auto);grid-template-rows:repeat(2,auto);gap:calc(9px * var(--ui-all,1));align-items:center;justify-items:center}
           /* phone held sideways (short screen): the pad was oversized there — smaller, tighter to the corner */
           #stage.short .btn{--s:58px}
@@ -748,7 +788,7 @@ window.AxonUI = (function () {
             ldEl = document.createElement('div'); ldEl.id = 'ldx'; api.stage.appendChild(ldEl);
         }
         const txt = pickTip(ctx), L = I.lang, t0 = performance.now(), MIN = 5000;
-        ldEl.innerHTML = `<div class="lc" dir="${L === 'ar' ? 'rtl' : 'ltr'}"><small>${sub || ''}</small><h2>${title}</h2><div class="bar"><i></i></div>
+        ldEl.innerHTML = `<div class="lc" dir="${L === 'ar' ? 'rtl' : 'ltr'}"><div class="ax-logo ldx-logo">${window.AxonLogo || ''}</div><small>${sub || ''}</small><h2>${title}</h2><div class="bar"><i></i></div>
             <div class="tipc"><span>${TIP_K[L] || TIP_K.en}</span><b>${txt[0]}</b><p>${txt[1]}</p></div></div>`;
         ldEl.classList.remove('on'); void ldEl.offsetWidth; ldEl.classList.add('on');
         // a studio-style trip: fade to the briefing (0.35 s) → swap the world while it's opaque → draw a few frames
@@ -817,7 +857,7 @@ window.AxonUI = (function () {
     }
 
     return {
-        setProgress, scriptLoaded, LOGO_SVG, countdown, tip, loading, ldLabel, tipsOpen,
+        setProgress, scriptLoaded, LOGO_SVG, countdown, tip, loading, ldLabel, tipsOpen, freeze: on => { if (api && api.freeze && (!on || !api.canFreeze || api.canFreeze())) { api.freeze(on); return true; } return false; },
         get paused() { return paused; },
         init(a) {
             api = a; Ctl.install(); buildMenu(); buildPause();

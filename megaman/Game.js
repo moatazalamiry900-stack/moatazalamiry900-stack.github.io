@@ -10,6 +10,7 @@ async function initCyberGame() {
     window.__axonStarted = true;
 
     const $ = id => document.getElementById(id);
+    const SK = window.AxonSkills || { has: () => false }, TRN = window.AxonTraining, CHT = window.AxonCheats || { on: () => false }, GRD = window.AxonGuard || { tick() { }, block: () => false };   // moves learned in the HQ training wing (training.js)
     const UI = window.AxonUI, T = window.AxonI18n.t, MP = window.AxonCoop;   // MP: co-op hooks (coop.js) — plain single player when no room is open
     const tick = (p, label) => { UI && UI.setProgress(p, label); return new Promise(r => requestAnimationFrame(() => r())); };
     let uiReady = false;
@@ -63,7 +64,7 @@ async function initCyberGame() {
     // 1. Procedural Audio
     // ==========================================
     const AudioSys = window.AxonAudio.AudioSys;
-    const Music = window.AxonAudio.makeMusic(store).watchVisibility().keepAlive();
+    const Music = window.AxonAudio.makeMusic(store).watchVisibility().keepAlive(); window.AxonMusic = Music;
     const UP = window.AxonShop.stats;   // upgrade multipliers bought in the ARMORY (shop.js)
     const BAL = {
         shot: { dmg: 10, cost: 4, cool: 0.16 }, mid: { dmg: 24, cost: 10 }, big: { dmg: 48, cost: 22 },
@@ -83,7 +84,7 @@ async function initCyberGame() {
         flush() { this.pressed = {}; this.released = {}; }
     };
 
-    const KEYMAP = { Space: 'Jump', ShiftLeft: 'Dash', ShiftRight: 'Dash', KeyJ: 'Attack', KeyK: 'Shoot', KeyL: 'Lock', Tab: 'Lock' };
+    const KEYMAP = { Space: 'Jump', ShiftLeft: 'Dash', ShiftRight: 'Dash', KeyJ: 'Attack', KeyK: 'Shoot', KeyL: 'Lock', Tab: 'Lock', KeyU: 'Guard' };
     const MOVEKEYS = { KeyW: [0, -1], ArrowUp: [0, -1], KeyS: [0, 1], ArrowDown: [0, 1], KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0] };
     const keysDown = new Set();
     window.addEventListener('keydown', e => {
@@ -199,8 +200,8 @@ async function initCyberGame() {
     const glowMat = (c, o = 1) => new THREE.MeshBasicMaterial({ color: c, transparent: o < 1, opacity: o });
 
     const PERF = window.AxonPerf, batcher = new PERF.WorldBatcher(scene);
-    const blockMat = kind => new THREE.MeshStandardMaterial({
-        map: surfaceTex(kind, 'map', 1, 1), emissiveMap: surfaceTex(kind, 'emi', 1, 1),
+    const blockMat = (kind, p = '') => new THREE.MeshStandardMaterial({
+        map: surfaceTex(p + kind, 'map', 1, 1), emissiveMap: surfaceTex(p + kind, 'emi', 1, 1),
         emissive: 0xffffff, emissiveIntensity: kind === 'door' ? 1.0 : kind === 'floor' ? 0.45 : 0.75,
         roughness: kind === 'floor' ? 0.35 : 0.5, metalness: kind === 'floor' ? 0.7 : 0.55, envMapIntensity: 0.9
     });
@@ -208,17 +209,17 @@ async function initCyberGame() {
         const kind = isDoor ? 'door' : isFloor ? 'floor' : 'wall';
         const rx = isFloor ? w / 6 : Math.max(w, d) / 8, ry = isFloor ? d / 6 : h / 8;
         solids.push(new THREE.Box3(new THREE.Vector3(x - w / 2, y - h / 2, z - d / 2), new THREE.Vector3(x + w / 2, y + h / 2, z + d / 2)));
-        if (!batcher.done) { batcher.addBlock(kind, x, y, z, w, h, d, Math.max(1, Math.round(rx)), Math.max(1, Math.round(ry)), isDoor ? 0xff2a6d : isFloor ? 0x57e2ff : 0x2a7dff); return null; }
+        if (!batcher.done) { batcher.addBlock(kind, x, y, z, w, h, d, Math.max(1, Math.round(rx)), Math.max(1, Math.round(ry)), isDoor ? 0xffa826 : isFloor ? 0x6a4424 : 0x2c120a); return null; }
         const geo = new THREE.BoxGeometry(w, h, d);
         const mat = new THREE.MeshStandardMaterial({
-            map: surfaceTex(kind, 'map', rx, ry), emissiveMap: surfaceTex(kind, 'emi', rx, ry),
+            map: surfaceTex('m' + kind, 'map', rx, ry), emissiveMap: surfaceTex('m' + kind, 'emi', rx, ry),
             emissive: 0xffffff, emissiveIntensity: isDoor ? 1.0 : isFloor ? 0.45 : 0.75,
             roughness: isFloor ? 0.35 : 0.5, metalness: isFloor ? 0.7 : 0.55, envMapIntensity: 0.9
         });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(x, y, z);
         mesh.receiveShadow = true; mesh.castShadow = !isFloor;
-        const edgeColor = isDoor ? 0xff2a6d : isFloor ? 0x57e2ff : 0x2a7dff;
+        const edgeColor = isDoor ? 0xffa826 : isFloor ? 0x6a4424 : 0x2c120a;
         mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.85 })));
         mesh.updateMatrixWorld(true);
         scene.add(mesh); platforms.push(mesh);
@@ -251,7 +252,7 @@ async function initCyberGame() {
 
     function buildWorld() {
         const layout = MP.seeded(() => window.AxonLevel.generate(api));   // co-op: the same world on every device
-        platforms.push(...batcher.finish({ floor: blockMat('floor'), wall: blockMat('wall'), door: blockMat('door') }));
+        platforms.push(...batcher.finish({ floor: blockMat('floor', 'm'), wall: blockMat('wall', 'm'), door: blockMat('door', 'm') }));
         motes = window.AxonSurf.motes(scene, layout, isCoarse ? 450 : 900, spriteTex);   // rising data motes, animated on the GPU
         return layout;
     }
@@ -276,6 +277,8 @@ async function initCyberGame() {
         m.position.copy(pos); m.scale.setScalar(size * 0.4);
         addFx({ mesh: m, life, max: life, update(f) { const k = 1 - f.life / f.max; f.mesh.scale.setScalar(size * (0.4 + k)); f.mesh.material.opacity = 1 - k; } });
     }
+    // what a hit does to an enemy (squash, knock-back, stagger) and the white cut across it: impact.js
+    const { hitReact, hitTick, contact, meleeImpact, cutGeo } = window.AxonImpact.create({ THREE, MP, moveBody: (...a) => moveBody(...a), fxPool, addFx, spawnSparks, camera: () => cameraSystem.camera, player: () => player });
     function updateFx(dt) {
         sparkPool.update(dt);
         for (let i = fx.length - 1; i >= 0; i--) {
@@ -530,6 +533,10 @@ async function initCyberGame() {
             this.mesh.rotation.set(0, y, 0);
         }
 
+        // METEOR DIVE (training.js): the logic lives with the rest of the training wing
+        startDive() { TRN.dive.start(this, DIVE_FX); }
+        diveImpact() { TRN.dive.impact(this, DIVE_FX); }
+
         doJump(force, kind = 'jump') {
             this.velocity.y = force; this.isGrounded = false; this.coyote = 0; this.jumpBuffer = 0;
             AudioSys.playJump(kind);
@@ -540,6 +547,7 @@ async function initCyberGame() {
             const res = moveBody(this.mesh.position, this.velocity, dt, this.body.r, 0, this.body.h, wasGrounded ? 0.45 : 0.15, true);
             this.isGrounded = res.grounded; this.lastRes = res;
             if (res.grounded) {
+                if (this.diving) { this.diving = false; if (!wasGrounded) this.diveImpact(); }
                 const hs = Math.hypot(this.velocity.x, this.velocity.z);
                 if (!wasGrounded && fallSpeed < -26 && hs > 9 && this.slashTimer <= 0) { this.rollT = 0.4; AudioSys.playRoll(); }   // ninja roll
                 else if (!wasGrounded && fallSpeed < -8) { this.landT = clamp(-fallSpeed / 40, 0.08, 0.2); AudioSys.playLand((-fallSpeed - 8) / 32); }
@@ -549,7 +557,7 @@ async function initCyberGame() {
                 this.jumpCount = 0; this.airDashUsed = false; this.dashJump = false; this.coyote = 0.1;
                 if (!this.isDashing) this.lastSafePos.copy(this.mesh.position).setY(this.mesh.position.y + 0.5);
             } else if (wasGrounded && this.jumpCount === 0) this.jumpCount = 1;   // walked off a ledge: keep the air jump
-            if (this.mesh.position.y < -30) { this.takeDamage(20, true); this.mesh.position.copy(this.lastSafePos); this.velocity.set(0, 0, 0); }
+            if (this.mesh.position.y < -30) { this.diving = false; this.takeDamage(20, true); this.mesh.position.copy(this.lastSafePos); this.velocity.set(0, 0, 0); }
         }
 
         findLedge(n) {
@@ -606,6 +614,7 @@ async function initCyberGame() {
 
             ['attackCooldown', 'shotCooldown', 'invincibleTimer', 'recoilTimer', 'aimTimer', 'slashTimer', 'hurtTimer', 'coyote', 'jumpBuffer', 'lungeTimer', 'shieldT', 'comboWindow', 'flipT', 'rollT', 'wallSlide', 'wallJumpT', 'skidT']
                 .forEach(k => { if (this[k] > 0) this[k] -= dt; });
+            GRD.tick(this, dt, Input, DIVE_FX);
             if (Input.just('Jump')) this.jumpBuffer = 0.14;
             if (Input.justReleased('Jump') && this.velocity.y > 0 && !this.isDashing) this.velocity.y *= 0.5;   // short hop
 
@@ -638,7 +647,7 @@ async function initCyberGame() {
                 }
                 const top = this.speed * (this.dashJump ? 1.6 : 1) * mag * stance;
                 const tx = moveDir.x * top, tz = moveDir.z * top;
-                const acc = (this.lungeTimer > 0 ? 0 : this.isGrounded ? (mag > 0 ? 120 : 90) : 55) * (this.slashTimer > 0 && this.isGrounded ? 0.3 : 1) * (this.wallJumpT > 0 ? 0.25 : 1);
+                const acc = (this.lungeTimer > 0 ? 0 : this.isGrounded ? (mag > 0 ? 120 : 90) : 55) * (this.slashTimer > 0 && this.isGrounded ? (mag > 0 ? 0.3 : 2.5) : 1) * (this.wallJumpT > 0 ? 0.25 : 1);
                 const dx = tx - this.velocity.x, dz = tz - this.velocity.z, dl = Math.hypot(dx, dz), step = acc * dt;
                 if (dl <= step) { this.velocity.x = tx; this.velocity.z = tz; }
                 else { this.velocity.x += dx / dl * step; this.velocity.z += dz / dl * step; }
@@ -668,16 +677,21 @@ async function initCyberGame() {
                     } else if (this.jumpCount < 2) {
                         this.jumpCount = 2; this.doJump(this.jumpForce, 'flip'); this.flipT = 0.46;   // double jump = front flip
                         spawnShockwave(this.mesh.position.clone(), 0x39d7ff, 2);
-                    }
+                    } else if (TRN && SK.has('dive') && !this.diving) this.startDive();   // METEOR DIVE: a third press in the air
                 }
             }
 
+            if (this.slashTimer > 0 || this.comboWindow > 0) PERF.holdOff(this.mesh.position, this.velocity, this.body.r, enemies, 0.8, (e, nx, nz, pen) => {   // swing from a blade's length, not from inside the enemy
+                const v = Math.min(pen * 30, 11);   // eased out, never a jump
+                if (e.type !== 'boss') moveBody(e.mesh.position, _S.p.set(-nx * v, 0, -nz * v), dt, e.body.r, e.body.off, e.body.h, 0.3, false);
+            });
+            if (this.diving) TRN.dive.tick(this, dt, DIVE_FX);
             this.stepPhysics(dt);
             this.collideEnemies(dt);
             const r = this.lastRes || {};
             // wall contact while airborne: grab a ledge if there is one, otherwise slide down the wall —
             // any time he touches it while falling (holding toward it only makes the grip slower)
-            if (!this.isGrounded && !this.isDashing && (r.wx || r.wz)) {
+            if (!this.isGrounded && !this.isDashing && !this.diving && (r.wx || r.wz)) {
                 const n = new THREE.Vector3(r.wx || 0, 0, r.wz || 0).normalize(), into = mag > 0.2 ? moveDir.dot(n) : 0;
                 const lg = mag > 0.2 && into < -0.25 && this.findLedge(n);
                 if (lg) {   // grab the edge instead of sliding down the wall
@@ -730,6 +744,11 @@ async function initCyberGame() {
                 const fw = new THREE.Vector3(Math.sin(this.mesh.rotation.y), 0, Math.cos(this.mesh.rotation.y));
                 const pos = this.mesh.position.clone().addScaledVector(fw, h.fwd); pos.y += h.y;
                 meleeHitboxes.push({ pos, life: 0.1, damage: Math.round(h.dmg * UP.meleeMul), extra: h.extra + UP.meleeExtra, stop: h.stop, hit: new Set() });
+                if (h.ring) {   // cyclone: a ring of light sweeps out at each turn
+                    const g = this.mesh.position.clone(); g.y += 0.06;
+                    spawnShockwave(g, this.mats.glow.color.getHex(), h.ring); spawnSparks(pos, 0x9df3ff, 8, 10);
+                    if (h.ring >= 6) { cameraSystem.shake(0.3); AudioSys.playExplode(); }
+                }
                 if (h.slam) {
                     const g = this.mesh.position.clone().addScaledVector(fw, 1.8); g.y += 0.06;
                     spawnShockwave(g, this.mats.glow.color.getHex(), 5); spawnSparks(g, 0xffd27a, 16, 12); cameraSystem.shake(0.35); AudioSys.playExplode();
@@ -824,13 +843,14 @@ async function initCyberGame() {
             let kind;
             if (air) { kind = 'air'; this.airSlashUsed = true; this.velocity.y = Math.max(this.velocity.y, 5); }
             else {
-                this.comboStep = (chained || this.comboWindow > 0) ? (this.comboStep + 1) % 3 : 0;
-                kind = ['h1', 'h2', 'fin'][this.comboStep];
+                // CYCLONE EDGE (learned in the training wing): a 4th hit after the finisher
+                this.comboStep = (chained || this.comboWindow > 0) ? (this.comboStep + 1) % (SK.has('cyclone') ? 4 : 3) : 0;
+                kind = ['h1', 'h2', 'fin', 'spin'][this.comboStep];
             }
-            const D = { h1: 0.28, h2: 0.28, fin: 0.44, air: 0.38 }[kind];
+            const D = { h1: 0.28, h2: 0.28, fin: 0.44, air: 0.38, spin: 0.62 }[kind];
             this.slashKind = kind; this.slashDur = D; this.slashTimer = D; this.slashSide *= -1;
             this.comboWindow = D + 0.35; this.attackCooldown = 0.06;
-            this.sword.visible = true; AudioSys.playSwing(kind);
+            this.sword.visible = true; AudioSys.playSwing(kind === 'spin' ? 'air' : kind);
             let aim = new THREE.Vector3(Math.sin(this.mesh.rotation.y), 0, Math.cos(this.mesh.rotation.y));
             const t = this.activeTarget();
             let dist = Infinity;
@@ -838,16 +858,14 @@ async function initCyberGame() {
                 aim.subVectors(t.mesh.position, this.mesh.position); aim.y = 0; dist = aim.length(); aim.normalize();
                 this.mesh.rotation.y = Math.atan2(aim.x, aim.z);
             }
-            if (!air) {
-                const lunge = dist > 3.2 && dist < 10 ? 26 : kind === 'fin' ? 14 : 9;
-                this.velocity.x = aim.x * lunge; this.velocity.z = aim.z * lunge; this.lungeTimer = kind === 'fin' ? 0.16 : 0.11;
-                if (kind === 'h2') this.velocity.y = Math.max(this.velocity.y, 4);   // the rising cut lifts you a little
-            }
+            // no lunge and no hop: during a cut the hero only moves if the stick moves him
             const hits = {
-                h1: [{ t: D * 0.35, dmg: 14, fwd: 2.2, y: 1.6, extra: 0, stop: 0.045 }],
-                h2: [{ t: D * 0.4, dmg: 16, fwd: 2.2, y: 2.0, extra: 0.3, stop: 0.05 }],
+                h1: [{ t: D * 0.35, dmg: 14, fwd: 2.2, y: 1.6, extra: 0.35, stop: 0.045 }],
+                h2: [{ t: D * 0.4, dmg: 16, fwd: 2.2, y: 2.0, extra: 0.45, stop: 0.05 }],
                 fin: [{ t: D * 0.55, dmg: 30, fwd: 2.4, y: 1.2, extra: 0.9, stop: 0.09, slam: true }],
-                air: [{ t: D * 0.3, dmg: 12, fwd: 0, y: 1.6, extra: 0.9, stop: 0.03 }, { t: D * 0.72, dmg: 12, fwd: 0, y: 1.6, extra: 0.9, stop: 0.03 }]
+                air: [{ t: D * 0.3, dmg: 12, fwd: 0, y: 1.6, extra: 0.9, stop: 0.03 }, { t: D * 0.72, dmg: 12, fwd: 0, y: 1.6, extra: 0.9, stop: 0.03 }],
+                // two turns: three sweeps all around you (fwd 0 + a wide reach), the last one the heaviest
+                spin: [{ t: D * 0.3, dmg: 14, fwd: 0, y: 1.5, extra: 2.0, stop: 0.03, ring: 4 }, { t: D * 0.55, dmg: 14, fwd: 0, y: 1.5, extra: 2.0, stop: 0.03, ring: 4.6 }, { t: D * 0.8, dmg: 24, fwd: 0, y: 1.5, extra: 2.4, stop: 0.08, ring: 6 }]
             }[kind];
             this.pendingHits.push(...hits.map(h => ({ ...h })));
         }
@@ -883,7 +901,7 @@ async function initCyberGame() {
             if (charged) { AudioSys.playBigShot(); cameraSystem.shake(0.25); } else if (mid) { AudioSys.playBigShot(); } else AudioSys.playShoot();
         }
 
-        spend(n) { this.energy = Math.max(0, this.energy - n); this.enDelay = BAL.regenDelay; }
+        spend(n) { if (CHT.on('en')) return; this.energy = Math.max(0, this.energy - n); this.enDelay = BAL.regenDelay; }
         noEnergy() {   // dry fire: the bar flashes red, a dull click
             if (this._dryT && performance.now() - this._dryT < 250) return;
             this._dryT = performance.now(); AudioSys.playTone('square', 140, 90, 0.07, 0.05); UI.tip('energy');
@@ -891,8 +909,8 @@ async function initCyberGame() {
         }
 
         takeDamage(amount, force = false) {
-            if (this.dead) return;
-            if (!force && (this.invincibleTimer > 0 || this.isDashing)) return;
+            if (this.dead || CHT.on('hp')) return;   // cheat: unlimited health
+            if (!force && (this.invincibleTimer > 0 || this.isDashing || GRD.block(this, amount, DIVE_FX))) return;   // saber guard (guard.js)
             if (this.shieldT > 0) { if (!force) { spawnSparks(this.mesh.position.clone().setY(this.mesh.position.y + 1.6), 0xc9a7ff, 8, 8); AudioSys.playShieldBlock(); return; } }
             PERF.mark('hurt'); this._hurtAt = performance.now(); this.hp -= amount; this.invincibleTimer = BAL.hurtInvuln; this.hurtTimer = 0.12; this.lastHurt = amount;
             resetCombo(); AudioSys.playHurt(); cameraSystem.shake(0.35); if (this.hp < this.maxHp * 0.7) UI.tip('dodge');
@@ -949,7 +967,7 @@ async function initCyberGame() {
             if (!remove && !p.ghost) for (const e of enemies) {
                 if (p.hit.has(e)) continue;
                 if (p.mesh.position.distanceTo(e.aimPoint(_S.a)) < e.hitRadius() + (p.pierce ? 0.8 : 0)) {
-                    p.hit.add(e); e.takeDamage(p.damage, p.mesh.position.clone(), p.crit); addCombo(); AudioSys.playShotHit(p.crit, panOf(p.mesh.position));
+                    p.hit.add(e); const hp0 = e.hp; e.takeDamage(p.damage, p.mesh.position.clone(), p.crit); if (e.hp < hp0) hitReact(e, p.dir.x, p.dir.z, p.crit ? 0.55 : 0.3); addCombo(); AudioSys.playShotHit(p.crit, panOf(p.mesh.position));
                     SHOTS.burst(p.mesh.position, p.dir, p.tier, 'hit');
                     if (!p.pierce) { remove = true; break; }
                 }
@@ -962,7 +980,7 @@ async function initCyberGame() {
             for (const e of eList(enemies)) {
                 if (hb.hit.has(e)) continue;
                 if (hb.pos.distanceTo(e.aimPoint(_S.a)) < (e.meleeR || (e.type === 'heavy' ? 3.6 : 3.0)) + (hb.extra || 0)) {
-                    hb.hit.add(e); e.takeDamage(hb.damage, e.aimPoint(), hb.stop > 0.06); addCombo(); PERF.mark('saber hit'); AudioSys.playSaberHit(hb.stop > 0.06, panOf(hb.pos));
+                    hb.hit.add(e); const hp0 = e.hp, at = contact(e); e.takeDamage(hb.damage, at, hb.stop > 0.06); if (e.hp < hp0) meleeImpact(e, at, hb.stop > 0.06); addCombo(); PERF.mark('saber hit'); AudioSys.playSaberHit(hb.stop > 0.06, panOf(hb.pos));
                     hitStop = Math.max(hitStop, hb.stop || 0.045); cameraSystem.shake(hb.stop > 0.06 ? 0.3 : 0.15);
                 }
             }
@@ -1058,7 +1076,10 @@ async function initCyberGame() {
     await tick(95, T('load_hero'));
     const cameraSystem = new CameraSystem();
     window.AxonCamera.bindInput({ stage, View, AudioSys, cameraSystem });   // drag to turn, pinch / wheel / buttons to zoom (camera.js)
+    const DIVE_FX = { audio: AudioSys, shock: (...a) => spawnShockwave(...a), flash: (...a) => spawnFlash(...a), sparks: (...a) => spawnSparks(...a), shake: a => cameraSystem.shake(a),
+        enemies: () => eList(enemies), mul: () => UP.meleeMul, combo: () => addCombo(), stop: t => { hitStop = Math.max(hitStop, t); } };
     const hub = window.AxonHub.create({ THREE, scene, PERF, solids, blockMat, stage, AudioSys, Input, store, levelObjs, roamLight, player, cameraSystem,
+        fx: { sparks: (...a) => spawnSparks(...a), shock: (...a) => spawnShockwave(...a) },
         getState: () => state, setState: v => { state = v; },
         onExit: () => MP.block() || outside.travel(true),
         onExplore: () => MP.block() || explore.travel('in'), onForge: () => forge.open(), onLook: () => biolab.open(),
@@ -1099,14 +1120,8 @@ async function initCyberGame() {
     const autoTier = () => { const d = QS.detect(renderer, isCoarse), cap = store.get('fxCap', 'ULTRA');
         return QS.TIERS.indexOf(cap) >= 0 && QS.TIERS.indexOf(cap) < QS.TIERS.indexOf(d) ? cap : d; };
     let quality = fxMode === 'AUTO' ? autoTier() : fxMode;
-    // Player overrides on top of the tier (Settings → Glow / Shadows / Resolution): 'auto' follows the tier.
-    // Phones: the glow (bloom) is OFF unless the player turns it on — on an Adreno 725 it cost about 40 % of the 1 % lows
-    // (15 vs 25 FPS) for a softer look; shadows and resolution keep following the tier.
-    let fxBloom = store.get('fxBloom', 'auto'), fxShadow = store.get('fxShadow', 'auto'), fxRes = store.get('fxRes', 'auto');
-    const bloomOn = () => fxBloom === 'on' ? true : fxBloom === 'off' ? false : QS.CFG[quality].bloom && !isCoarse;
-    const shadowOn = () => fxShadow === 'on' ? true : fxShadow === 'off' ? false : QS.CFG[quality].shadow;
-    // a fixed resolution never changes during play (no render-target reallocation hitches); 'auto' = dynamic resolution
-    const resScale = () => fxRes === 'auto' ? dynRes.scale : +fxRes;
+    const GFX = new window.AxonPerf.GfxOptions(store, isCoarse, T);   // Settings → glow / shadows / resolution / character detail (perf.js)
+    const bloomOn = () => GFX.bloom(QS.CFG[quality].bloom), shadowOn = () => GFX.shadow(QS.CFG[quality].shadow), resScale = () => GFX.res(dynRes.scale);
     const dynRes = new window.AxonPerf.DynRes(0.7, 1.12); let lastF = 0;
 
     function applyQuality(resOnly) {
@@ -1171,7 +1186,7 @@ async function initCyberGame() {
         if (fxMode === 'AUTO') store.set('fxCap', 'ULTRA');   // fresh chance for auto after a manual pick
         quality = fxMode === 'AUTO' ? autoTier() : fxMode; store.set('fxMode', fxMode); applyQuality();
     });
-    fxPool.prewarm(ringGeo, 14, THREE.DoubleSide); fxPool.prewarm(flashGeo, 10);
+    fxPool.prewarm(ringGeo, 14, THREE.DoubleSide); fxPool.prewarm(flashGeo, 10); fxPool.prewarm(cutGeo, 4, THREE.DoubleSide);
     function prewarmShaders() {
         const a = fxPool.get(ringGeo, 0xffffff, { side: THREE.DoubleSide }), b = fxPool.get(flashGeo, 0xffffff);
         window.AxonHero.updateTrail(player, 0);
@@ -1280,7 +1295,7 @@ async function initCyberGame() {
         const out = state === 'outside';
         if (state !== 'play' && !out) return;
         if (kind === 'over' && runSnap && !out) {
-            runLost = Math.max(0, window.AxonShop.credits - JSON.parse(runSnap.shop).credits);
+            runLost = Math.max(0, window.AxonShop.wallet - JSON.parse(runSnap.shop).credits);
             window.AxonShop.restore(runSnap.shop);
             try { if (runSnap.ck) localStorage.setItem('axon.ckpt', runSnap.ck); else localStorage.removeItem('axon.ckpt'); } catch (e) { }
         }
@@ -1295,27 +1310,8 @@ async function initCyberGame() {
         pause: on => { if (on) { resumeTo = state; state = 'pause'; } else if (state === 'pause') { state = resumeTo; Input.flush(); keysDown.clear(); } },
         setBody: t => { if (t !== player.bodyType) player.setBody(t); }, bodyType: () => player.bodyType,
         capLabel: () => { const hz = window.AxonPerf.Display.hz; return limiter.cap > hz + 2 ? `${limiter.cap} FPS · ${T('screen_hz', hz)}` : `${limiter.cap} FPS`; },
-        // graphics options: glow / shadows / resolution (Settings)
-        fxOpt: k => {
-            if (k === 'hero') { const h = store.get('heroDetail', 'auto'); return h === 'auto' ? T('q_auto') + ' · ' + T(isCoarse ? 'q_LO' : 'q_HI') : T(h === 'high' ? 'q_HI' : 'q_LO'); }
-            const v = k === 'bloom' ? fxBloom : k === 'shadow' ? fxShadow : fxRes;
-            if (v === 'auto') {
-                const eff = k === 'bloom' ? bloomOn() : k === 'shadow' ? shadowOn() : null;
-                return T('q_auto') + (eff === null ? '' : ' · ' + T(eff ? 'on' : 'off'));
-            }
-            return k === 'res' ? Math.round(+v * 100) + '%' : T(v);
-        },
-        cycleFxOpt: k => {
-            if (k === 'hero') {   // rebuild the hero with the new segment counts (same body, skin and look)
-                const o = ['auto', 'high', 'low']; store.set('heroDetail', o[(o.indexOf(store.get('heroDetail', 'auto')) + 1) % o.length]);
-                player.setBody(player.bodyType); prewarmShaders(); return;
-            }
-            const order = k === 'res' ? ['auto', '1', '0.85', '0.7'] : ['auto', 'on', 'off'];
-            const cur = k === 'bloom' ? fxBloom : k === 'shadow' ? fxShadow : fxRes, next = order[(order.indexOf(cur) + 1) % order.length];
-            if (k === 'bloom') fxBloom = next; else if (k === 'shadow') fxShadow = next; else fxRes = next;
-            store.set(k === 'bloom' ? 'fxBloom' : k === 'shadow' ? 'fxShadow' : 'fxRes', next);
-            applyQuality(k === 'res');
-        },
+        fxOpt: k => GFX.label(k, k === 'bloom' ? bloomOn() : shadowOn()),
+        cycleFxOpt: k => { GFX.cycle(k); if (k === 'hero') { player.setBody(player.bodyType); prewarmShaders(); } else applyQuality(k === 'res'); },
         cycleCap: () => { const o = capOptions(); limiter.cap = o[(o.indexOf(limiter.cap) + 1) % o.length] || 60; store.set('fpsCap', String(limiter.cap)); },
         calm: () => {   // tips wait for a quiet moment
             if (state !== 'play') return true;
@@ -1324,7 +1320,7 @@ async function initCyberGame() {
         },
         canFreeze: () => (state === 'play' || state === 'hub' || state === 'outside' || state === 'countdown') && !player.dead,
         freeze: on => { if (on) { if (state !== 'tips') resumeTo = state; state = 'tips'; } else if (state === 'tips') { state = resumeTo; Input.flush(); keysDown.clear(); } },
-        bench: secs => fpsMeter.bench(secs, () => ({ tier: (fxMode === 'AUTO' ? 'AUTO→' : '') + quality + (bloomOn() ? ' · bloom' : '') + (shadowOn() ? ' · shadow' : '') + (fxRes !== 'auto' ? ' · res ' + Math.round(fxRes * 100) + '%' : ''), cap: limiter.cap })),
+        bench: secs => fpsMeter.bench(secs, () => ({ tier: (fxMode === 'AUTO' ? 'AUTO→' : '') + quality + (bloomOn() ? ' · bloom' : '') + (shadowOn() ? ' · shadow' : '') + GFX.tag(), cap: limiter.cap })),
         fpsOn: () => fpsOn, toggleFps: () => { fpsOn = !fpsOn; store.set('fps', fpsOn ? '1' : '0'); fpsMeter.show(fpsOn); }
     });
 
@@ -1333,7 +1329,7 @@ async function initCyberGame() {
     // ==========================================
     const idleMove = { x: 0, y: 0, active: false };
     let hbT = 0;   // low-HP heartbeat timer
-    const LOD_NEAR = 55 * 55, LOD_FAR = 150 * 150;   // full detail · silhouette · not drawn
+    const LOD_NEAR = (isCoarse ? 44 : 55) ** 2, LOD_FAR = 150 * 150;   // full detail · silhouette · not drawn (phones: silhouettes sooner)
     const limiter = new window.AxonPerf.FrameLimiter();
     limiter.cap = +store.get('fpsCap', '60') || 60;
     const capOptions = () => window.AxonPerf.Display.hz >= 115 ? [30, 40, 60, 90, 120] : [30, 60, 90, 120];   // 40 on a 120 Hz screen = every 3rd refresh: perfectly even 25 ms frames (the console '40 FPS mode')   // above the screen's real rate simply means 'as fast as the screen allows'
@@ -1355,7 +1351,7 @@ async function initCyberGame() {
         lastVs = vs; fpsMeter.vsync(vs); now = vs;
 
         const tA = performance.now(); renderer.info.reset();
-        if (fxRes === 'auto' && (state === 'play' || state === 'hub' || state === 'outside') && lastF && dynRes.frame(now - lastF, 1000 / Math.min(limiter.cap, window.AxonPerf.Display.hz), frameTime, PERF.sinceCombat() > 2500)) { applyQuality(true); fpsMeter.res = dynRes.scale; }
+        if (GFX.autoRes && (state === 'play' || state === 'hub' || state === 'outside') && lastF && dynRes.frame(now - lastF, 1000 / Math.min(limiter.cap, window.AxonPerf.Display.hz), frameTime, PERF.sinceCombat() > 2500)) { applyQuality(true); fpsMeter.res = dynRes.scale; }
         lastF = now;
 
         if (hitStop > 0) { hitStop -= frameTime; frameTime *= 0.08; }
@@ -1385,7 +1381,7 @@ async function initCyberGame() {
                     const d2 = (e.mesh.position.x - pp.x) ** 2 + (e.mesh.position.z - pp.z) ** 2;
                     if (!last) { } else if (e.type === 'boss') e.mesh.visible = d2 < 110 * 110;
                     else { e.mesh.visible = d2 < LOD_NEAR; e.mesh.userData.lazy = true; if (!e.mesh.visible && d2 < LOD_FAR) impostors.add(e); }   // LOD (hidden = no matrix work)
-                    MP.tickEnemy(e, dt, time, d2);   // single player: e.update near the hero · co-op host: nearest hero · guest: host's puppet
+                    MP.tickEnemy(e, e._hr ? dt * hitTick(e, dt) : dt, time, d2);   // single player: e.update near the hero · co-op host: nearest hero · guest: host's puppet
                 }
                 if (!inOut) updateRoamLight(pp);
                 updateCombat(dt);
@@ -1414,10 +1410,12 @@ async function initCyberGame() {
             window.AxonLevel.Feedback.update();
             cameraSystem.update(player, dt, move);
             const cs = hub.camShift || forge.camShift || biolab.camShift; if (cs) { cameraSystem.camera.translateX(cs[0]); cameraSystem.camera.translateY(cs[1]); }   // armor studio: hero beside the colour panel
-            if (state === 'title') { if (stage.classList.contains('is-portrait')) cameraSystem.camera.translateY(-1.2); else cameraSystem.camera.translateX(-2.2); }   // hero clear of the menu panel
+            if (state === 'title') window.AxonTitle.shot({ THREE, scene, camera: cameraSystem.camera, player, time, dt, roamLight, portrait: stage.classList.contains('is-portrait') });   // title.js
 
             dirLight.target.position.copy(player.mesh.position);
-            dirLight.position.copy(player.mesh.position); dirLight.position.x += 18; dirLight.position.y += 36; dirLight.position.z += 12;
+            dirLight.position.copy(player.mesh.position);
+            if (outside.on && outside.sunDir) dirLight.position.addScaledVector(outside.sunDir, 42);   // open world: sun / moon
+            else { dirLight.position.x += 18; dirLight.position.y += 36; dirLight.position.z += 12; }
             if (last) {
                 updateHUD();
                 const far = scene.fog && scene.fog.density ? Math.min(400, 2.6 / scene.fog.density) : 400, cam = cameraSystem.camera;   // nothing is drawn past the fog

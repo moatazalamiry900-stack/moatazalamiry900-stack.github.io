@@ -28,8 +28,8 @@ window.AxonAudio = (function () {
         bus() {
             if (this._bus || !this.ctx) return this._bus;
             const c = this.ctx, comp = c.createDynamicsCompressor();
-            comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.18;
-            const master = c.createGain(); master.gain.value = 0.95;
+            comp.threshold.value = -9; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.002; comp.release.value = 0.16;   // a limiter: it only touches the loudest moments
+            const master = c.createGain(); master.gain.value = 2.7;   // the whole mix was ~9 dB too quiet under the music (measured)
             master.connect(comp); comp.connect(c.destination);
             const len = Math.floor(c.sampleRate * 1.1), ir = c.createBuffer(2, len, c.sampleRate);
             for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
@@ -50,6 +50,7 @@ window.AxonAudio = (function () {
         // o: delay, attack, lp (low-pass Hz), q, detune, glide (fraction of dur for the sweep), pan, wet
         tone(type, f0, f1, dur, vol, o = {}) {
             if (!this.ctx || !(vol > 0)) return;
+            vol = Math.min(0.6, vol * (this._g || 1));
             const c = this.ctx, t = c.currentTime + (o.delay || 0), a = Math.min(o.attack || 0.004, dur * 0.5);
             const osc = c.createOscillator(), g = c.createGain(); osc.type = type;
             osc.frequency.setValueAtTime(Math.max(1, f0), t);
@@ -63,6 +64,7 @@ window.AxonAudio = (function () {
         // filtered noise: o.type (bandpass | lowpass | highpass), f0 → f1 sweep, q, attack, delay, pan, wet
         noise(dur, vol, o = {}) {
             if (!this.ctx || !(vol > 0)) return;
+            vol = Math.min(0.6, vol * (this._g || 1));
             const c = this.ctx;
             if (!this.noiseBuf) {
                 const len = c.sampleRate * 2; this.noiseBuf = c.createBuffer(1, len, c.sampleRate);
@@ -376,7 +378,7 @@ window.AxonAudio = (function () {
     // Starts after the first tap (browser rule), cross-fades between tracks, pauses in the background;
     // the ♪ button mutes it (remembered)
     const makeMusic = store => ({
-        els: {}, el: null, src: 'sounds/music1.mp3', started: false, on: store.get('music', '1') === '1', vol: 0.45,
+        els: {}, el: null, src: 'sounds/music1.mp3', started: false, on: store.get('music', '1') === '1', vol: 0.34,
         // Looping is done by hand, not with a.loop: some WebViews ignore loop (or can't seek a streamed mp3),
         // and then the track just stops at its end, or sits frozen on the last frame without firing 'ended'.
         mk(src) {
@@ -481,5 +483,16 @@ window.AxonAudio = (function () {
         }
     });
 
+    // ---------- THE MIX ----------
+    // Every sound was rendered offline and measured (peak and loudness). Three tiers, loudest to quietest:
+    //   impacts / explosions / the guardian  >  what the hero does (cut, shot, hit confirm, jump)  >  interface, text, foley.
+    // TRIM is the correction of each sound in dB on top of the master: the hit confirm, the buster and the saber
+    // swing were 15–25 dB under the doors and explosions; doors and the heartbeat were too hot.
+    const TRIM = { playHit: 16, playShoot: 8, playShotHit: 5, playMelee: 10, playSwing: 6, playSaberHit: 1, playJump: 6, playDash: 4, playLand: 3, playHurt: 2,
+        playEnemyShot: 6, playRicochet: 3, playLunge: 5, playCharge: 4, playChargeFull: 6, playStomp: 3, playBossLeap: 6, playRunnerWind: 4, playSpot: 3,
+        playUi: 10, playLock: 9, playComm: 4, playItem: 5, playDeny: 5,
+        playAirlock: -5, playSlideDoor: -5, playSheath: -8, playHeartbeat: -4, playExplode: -1, playDeath: 2 };
+    Object.keys(TRIM).forEach(k => { const f = AudioSys[k], g = Math.pow(10, TRIM[k] / 20); if (typeof f !== 'function') return; AudioSys[k] = function (...a) { const was = this._g; this._g = g; try { return f.apply(this, a); } finally { this._g = was; } }; });
     return { AudioSys, makeMusic };
 })();
+

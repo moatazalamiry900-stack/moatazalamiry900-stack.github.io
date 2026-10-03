@@ -289,7 +289,7 @@ window.AxonCoop = (function () {
     function pullTo(x, y, z, who) {
         const P = C.player, p = P.mesh.position;
         C.fxFlash(p.clone().setY(p.y + 1.3));
-        p.set(x, y + 0.05, z); if (C.api.freeSpot) C.api.freeSpot(p);
+        const o = SPOT[N().slot % 4]; p.set(x + (o[0] || 1.5), y + 0.05, z + o[1]); if (C.api.freeSpot) C.api.freeSpot(p);   // beside the teammate, never inside
         P.lastSafePos.copy(p); P.velocity.set(0, 0, 0); P.ledge = null; P.wallSlide = 0;
         C.fxFlash(p.clone().setY(p.y + 1.3)); C.api.AudioSys.playLock();
         if (who !== undefined) C.toast(tr(PULLED, N().nameOf(who)));
@@ -426,7 +426,8 @@ window.AxonCoop = (function () {
     }
 
     // ---------- every frame (game.js main loop) ----------
-    let teamT = 0, followT = 0;
+    let teamT = 0, followT = 0, lastW = 'x';
+    const _pv = new THREE.Vector3(), SPOT = [[0, 0], [1.8, 0.7], [-1.8, 0.7], [0, 2.0]];
     function tick(dt, time) {
         if (!C || !on()) return;
         while (pending.length) { const [m, f] = pending.shift(); onMsg(m, f); }
@@ -467,6 +468,18 @@ window.AxonCoop = (function () {
             if (hv > 0.5) { const ry = A.mesh.rotation.y, vx = st.v[0] / hv, vz = st.v[2] / hv; A.localF += (vx * Math.sin(ry) + vz * Math.cos(ry) - A.localF) * k; A.localS += (vx * Math.cos(ry) - vz * Math.sin(ry) - A.localS) * k; }
             try { window.AxonHero.animate(A, dt, time, hv > 2); } catch (err) { }
         });
+        // heroes are solid to each other: mine is pushed out of any teammate it overlaps (every device does the
+        // same for its own hero, so both step apart). Two heroes on the very same spot part in fixed directions.
+        if (!P.dead && W !== 'x') mates.forEach(m => {
+            const A = m.A; if (!A || !A.mesh.visible) return;
+            const q = A.mesh.position, p = P.mesh.position; if (Math.abs(p.y - q.y) > 1.9) return;
+            let dx = p.x - q.x, dz = p.z - q.z, d = Math.hypot(dx, dz); const R = 1.05; if (d >= R) return;
+            if (d < 0.03) { const a = N().slot * 2.4 + 0.6; dx = Math.cos(a); dz = Math.sin(a); d = 1; }
+            const push = Math.min(R - (d < 1 ? d : 0), 0.7) * 11; _pv.set(dx / d * push, 0, dz / d * push);
+            try { C.api.moveBody(p, _pv, dt, (P.body && P.body.r) || 0.5, 0, (P.body && P.body.h) || 2.6, 0.45, false); } catch (e) { }
+        });
+        // arriving somewhere together (the HQ, a mission, a restart): each slot steps to its own place
+        if (W !== lastW) { lastW = W; if (W !== 'x' && N().slot > 0 && !P.dead) { const o = SPOT[N().slot % 4], p = P.mesh.position; p.x += o[0]; p.z += o[1]; if (C.api.freeSpot) C.api.freeSpot(p); if (P.lastSafePos) P.lastSafePos.copy(p); } }
         if ((teamT -= dt) <= 0) { teamT = 0.25; drawTeam(); }
         // revive / team over
         if (reviveT > 0 && (reviveT -= dt) <= 0) { if (P.dead && W === 'm') revive(); }
@@ -512,6 +525,9 @@ window.AxonCoop = (function () {
 
     return {
         seeded, wrapEnemy, reward, init, tick, tickEnemy, team, fx, died, deployed, goto, block, bossStarted, where,
+        // teammates standing in my world right now (their avatars): doors and gates open for them too
+        heroes() { const out = []; if (C && on()) mates.forEach(m => { if (m.A && m.A.mesh.visible) out.push(m.A.mesh.position); }); return out; },
+        nearAny(x, z, r2) { if (!C || !on()) return false; let hit = false; mates.forEach(m => { if (!hit && m.A && m.A.mesh.visible) { const q = m.A.mesh.position; hit = (q.x - x) ** 2 + (q.z - z) ** 2 < r2; } }); return hit; },
         get on() { return on(); },
         get guest() { return guest(); },
         // pause / shop / tips don't stop a shared world: it keeps running (the hero just stands still)
@@ -520,3 +536,4 @@ window.AxonCoop = (function () {
         openLobby: () => N() && N().openLobby()
     };
 })();
+

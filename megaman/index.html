@@ -93,17 +93,20 @@
   #stage-label{position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);font-size:10px;letter-spacing:.2em;color:var(--amber);
     background:var(--panel);padding:2px 8px;white-space:nowrap}
   #stage.is-portrait .map-wrap,#stage.is-portrait #minimap{width:104px;height:104px}
-  #boss-bar{position:absolute;left:50%;top:calc(max(14px,env(safe-area-inset-top)) + 50px);transform:translateX(-50%);width:min(460px,46%);display:grid;gap:4px;text-align:center}
-  #stage.is-portrait #boss-bar{top:auto;bottom:210px;width:78%}
-  .bb-name{font-weight:700;font-size:13px;letter-spacing:.3em;color:#ff5c8a;text-shadow:0 0 10px rgba(255,42,109,.6)}
-  .bb-name small{font-size:9px;letter-spacing:.3em;color:var(--dim)}
-  .bb-track{position:relative;height:12px;background:rgba(40,6,18,.85);outline:1px solid rgba(255,42,109,.6);
-    clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
-  .bb-track i{position:absolute;inset:0;display:block;transform-origin:left center;transition:transform .15s linear;background:linear-gradient(90deg,#ff2a6d,#ff8a3d)}
+  /* the guardian's life: the same gauge as the hero's HP (notched, same height and cut), small, top centre */
+  #boss-bar{position:absolute;left:50%;top:calc(max(14px,env(safe-area-inset-top)) + 46px);transform:translateX(-50%);width:min(250px,30%);display:grid;gap:4px;text-align:start;direction:ltr}
+  #stage.is-portrait #boss-bar{top:calc(max(14px,env(safe-area-inset-top)) + 196px);width:56%}
+  .bb-name{font-weight:700;font-size:11px;letter-spacing:.2em;color:#c98bff;text-shadow:0 0 8px rgba(150,70,255,.6);white-space:nowrap}
+  .bb-name small{font-size:8px;letter-spacing:.18em;color:var(--dim)}
+  .bb-track{position:relative;height:12px;background:rgba(10,24,40,.85);outline:1px solid var(--line);
+    clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+  .bb-track i{position:absolute;inset:0;display:block;transform-origin:left center;transition:transform .12s linear;background:linear-gradient(90deg,#7a2bff,#d86bff)}
+  .bb-track::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(4,10,20,.9) 9px 11px)}
   #boss-bar.p2 .bb-track i{background:linear-gradient(90deg,#ff1f3d,#ffcf3d)}
-  .bb-mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.55)}
+  .bb-mid{display:none}
   #toast{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.9);font-weight:700;font-size:18px;letter-spacing:.25em;
-    color:#7dffb8;text-shadow:0 0 14px rgba(60,220,140,.7);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
+    color:#7dffb8;text-shadow:0 0 14px rgba(60,220,140,.7);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:normal;text-align:center;width:max-content;max-width:88%;line-height:1.5}
+  #toast:lang(ar),html[lang=ar] #toast,[dir=rtl] #toast{letter-spacing:0}
   #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
   .hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
   .sys{display:flex;gap:8px;pointer-events:none;flex-wrap:wrap;justify-content:flex-end}
@@ -142,7 +145,7 @@
     box-shadow:0 0 18px rgba(57,215,255,.65)}
   #pad{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:24px;pointer-events:none;display:grid;gap:10px;
     grid-template-columns:repeat(3,72px);grid-template-rows:repeat(2,72px);
-    grid-template-areas:"lock dash shoot" ". atk jump"}
+    grid-template-areas:"lock dash shoot" "guard atk jump"}
   /* combat buttons: armoured octagon plates — metal rim tinted by the action colour, dark glass face, glowing icon + label */
   .btn{--c:var(--cyan);--s:64px;pointer-events:auto;position:relative;width:var(--s);height:var(--s);padding:0;border:0;cursor:pointer;touch-action:none;color:var(--c);
     background:linear-gradient(160deg,#e9f1f8 0%,#7d8a99 38%,#2a313b 62%,#9aa7b5 100%);
@@ -172,6 +175,7 @@
   #btn-shoot{--c:var(--amber);--s:72px;grid-area:shoot}
   #btn-attack{--c:var(--magenta);--s:72px;grid-area:atk}
   #btn-jump{--c:#5cf0a0;grid-area:jump}
+  #btn-guard{--c:#7fd6ff;grid-area:guard}
   #btn-shoot,#btn-attack{align-self:center;justify-self:center}
   #stage.is-portrait #joystick-zone{width:48%;height:55%}
   #stage.is-portrait #joy-base{width:116px;height:116px;left:18px;bottom:36px}
@@ -388,6 +392,7 @@
   </div>
 </div>
 <script src="i18n.js"></script>
+<script src="menuskin.js"></script>
 <script src="ui.js"></script>
 <script>AxonI18n.fill(); AxonUI.bootStart();</script>
 <div id="stage" class="in-menu">
@@ -444,6 +449,7 @@
       <button class="btn" id="btn-dash" data-action="Dash" type="button" aria-label="DASH"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l9 7-9 7 2.5-7z"/><path d="M2 8h6v2H2zM1 11h7v2H1zM2 14h6v2H2z" opacity=".75"/></svg><span class="lbl" data-i18n="b_dash">DASH</span></span></button>
       <button class="btn" id="btn-shoot" data-action="Shoot" type="button" aria-label="BUSTER"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8.5h11.5a3.5 3.5 0 0 1 0 7H2z"/><circle cx="14" cy="12" r="1.8" fill="#061220"/><path d="M18 12l4-3v6z"/><path d="M19.5 5.5l2-2 1 1-2 2zM19.5 18.5l2 2 1-1-2-2z" opacity=".8"/></svg><span class="lbl" data-i18n="b_buster">BUSTER</span></span></button>
       <button class="btn" id="btn-attack" data-action="Attack" type="button" aria-label="SABER"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 2l1.5 1.5-10.8 11.9-2.6-2.6z"/><path d="M5.2 11.6l1.4-1.4 7.2 7.2-1.4 1.4z"/><path d="M8.2 15.8l2 2-4.7 4.7-2-2z"/><circle cx="3.2" cy="20.8" r="1.6"/></svg><span class="lbl" data-i18n="b_saber">SABER</span></span></button>
+      <button class="btn" id="btn-guard" data-action="Guard" type="button" aria-label="GUARD"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6.2c0 5-3.4 8.5-8 10.3-4.6-1.8-8-5.3-8-10.3V5z"/><path d="M12 5.3v13.4" stroke="#061220" stroke-width="1.6" fill="none"/></svg><span class="lbl" data-i18n="b_guard">GUARD</span></span></button>
       <button class="btn" id="btn-jump" data-action="Jump" type="button" aria-label="JUMP"><span class="face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 7h-4.5L12 7.5 9.5 10H5z"/><path d="M12 10l7 7h-4.5L12 14.5 9.5 17H5z" opacity=".75"/><path d="M5 20h14v2H5z" opacity=".6"/></svg><span class="lbl" data-i18n="b_jump">JUMP</span></span></button>
     </div>
   </div>
@@ -469,9 +475,20 @@
 <script src="shop.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="hero.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="hero-anim.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="foelook.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="foes.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="polish.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="comm.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="sectors.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="level.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="training.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="guard.js" onload="AxonUI.scriptLoaded()"></script>
+    <script src="guide.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="council.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="hqskin.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="hub.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="outside.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="aliens.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="explore.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="forge.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="biolab.js" onload="AxonUI.scriptLoaded()"></script>
@@ -481,6 +498,9 @@
 <script src="surfaces.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="net.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="coop.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="impact.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="winner.js" onload="AxonUI.scriptLoaded()"></script>
+<script src="title.js" onload="AxonUI.scriptLoaded()"></script>
 <script src="game.js" onload="AxonUI.scriptLoaded()"></script>
 </body>
 </html>

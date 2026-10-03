@@ -146,10 +146,10 @@ window.AxonLevel = (function () {
                     const chest = add(lathe([[0.26, 0], [0.4, 0.22], [0.46, 0.46], [0.36, 0.64], [0.18, 0.7]], 16), silver, this.core, 0, 0.02, 0); chest.scale.z = 0.72;
                     add(B(0.07, 0.46, 0.05), red, this.core, 0, 0.3, 0.33);
                     for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.19, 12, 8), hazard, this.core, s * 0.48, 0.62, 0);
-                    const head = grp(this.core, 0, 0.95, 0);
-                    add(C(0.22, 0.27, 0.4, 6), dark, head, 0, 0, 0);
-                    add(B(0.36, 0.07, 0.1), red, head, 0, 0.02, 0.22);
-                    add(B(0.05, 0.16, 0.42), hazard, head, 0, 0.24, -0.02);
+                    // head: rigid on the torso, so its parts go straight into the core and merge with it (3 fewer draw calls per stalker)
+                    add(C(0.22, 0.27, 0.4, 6), dark, this.core, 0, 0.95, 0);
+                    add(B(0.36, 0.07, 0.1), red, this.core, 0, 0.97, 0.22);
+                    add(B(0.05, 0.16, 0.42), hazard, this.core, 0, 1.19, -0.02);
                     this.armL = grp(this.core, -0.5, 0.55, 0); this.armR = grp(this.core, 0.5, 0.55, 0);
                     for (const a of [this.armL, this.armR]) {
                         add(C(0.11, 0.09, 0.5, 10), dark, a, 0, -0.28, 0);
@@ -194,7 +194,7 @@ window.AxonLevel = (function () {
                 // never spawn inside a block (that produced invisible, unreachable api.enemies)
                 const b = this.body; let tries = 0;
                 const cx = x, cz = z;
-                while (api.spotBlocked(x, z, b.r + 0.3, y + b.off + 0.3, y + b.off + b.h) && tries++ < 40) {
+                while ((api.spotBlocked(x, z, b.r + 0.3, y + b.off + 0.3, y + b.off + b.h) || !api.spotBlocked(x, z, 0.3, y - 12, y + 0.2)) && tries++ < 40) {   // …and never over nothing (outside the walls)
                     x = cx + api.rand(-9, 9); z = cz + api.rand(-9, 9);
                 }
                 this.spawnY = y; this.vel = new THREE.Vector3(); this.sees = false; this.seeTimer = api.rand(0, 0.3);
@@ -203,6 +203,7 @@ window.AxonLevel = (function () {
                 this.mode = 'idle'; this.aware = 0; this.searchT = 0; this.patrolT = api.rand(0.5, 3); this.markT = 0; this.strafe = Math.random() < 0.5 ? 1 : -1;
                 this.sense = SENSE[type];
                 this.mats.forEach(m => { m.userData.e = m.emissive.clone(); m.userData.ei = m.emissiveIntensity; });
+                if (window.AxonFoeLook) window.AxonFoeLook.dress(this, type, { add, C, B, dark, silver, red, hazard });   // the finished look (foelook.js)
                 window.AxonPerf.mergeStatic(this.core, m => m === this.ring || m === this.eye);
                 this.mesh.traverse(c => { if (c.isMesh) { c.castShadow = !api.lowShadow; c.receiveShadow = true; } });   // phones: only the heroes and the boss cast sun shadows (half the shadow-pass draw calls)
                 this.mark = new THREE.Sprite(MARK.q); this.mark.scale.setScalar(0.95); this.mark.visible = false; this.mark.renderOrder = 5;
@@ -402,9 +403,9 @@ window.AxonLevel = (function () {
                 if (this.isDead) return;
                 this.hp -= amount; api.AudioSys.playHit(); Feedback.hit(this, amount, at, crit);
                 this.alertNow(api.playerPos ? api.playerPos() : null);        // getting shot always gives you away
-                this.flash = 0.09;
-                this.mats.forEach(m => { m.emissive.setHex(0xffffff); m.emissiveIntensity = 1.4; });
-                api.spawnSparks(at || this.aimPoint(), 0xffd27a, 8, 10);
+                const hp = at || this.aimPoint();                             // white only where it was struck (the body keeps its colours)
+                api.spawnFlash(hp, 0xffffff, 0.55, 0.12);
+                api.spawnSparks(hp, 0xffd27a, 8, 10);
                 if (this.hp <= 0) this.die();
             }
 
@@ -437,6 +438,11 @@ window.AxonLevel = (function () {
     // The last arena is the boss chamber.
     // ---------------------------------------------------------------
     const STAGES = 9, RISE = 3;
+    // spike beds: one cycle = safe → warning (0.6 s, plate flickers) → spikes up (1 s). Floor 1 gives two full seconds of
+    // safe time (a 3.6 s cycle); every floor is 0.2 s shorter, down to 2.4 s. Rollers start slow and speed up the same way.
+    const trapPeriod = lvl => Math.max(2.4, 3.6 - 0.2 * lvl), rollerSpeed = lvl => Math.min(2.6, 1.5 + 0.14 * lvl);
+    // each floor has its own two colours (lights, trims, signs) and its own air: [main, accent]
+    const THEME = [[0x39d7ff, 0xffa826], [0xff2a9d, 0x39d7ff], [0xffa826, 0xff2a6d], [0x8f6bff, 0x5cf0a0], [0x2fd6c3, 0xff7a2a], [0xff3a4a, 0xffe066], [0x9dff3a, 0x8f6bff], [0xcfe8ff, 0xff2a9d], [0xff2a6d, 0xffc24a]];
     function generate(api) {
         const B = api.createFacilityBlock, zones = [], arenas = [], traps = [];
         // ---- GAUNTLET: between two sectors, a pit crossed on staggered platforms, with timed spike
@@ -474,20 +480,21 @@ window.AxonLevel = (function () {
             api.decorStrip(0, top + 0.03, z, 12, 0.03, 0.18, 0xffa826);        // its track
             traps.push({ kind: 'roll', z, top, off, mesh: g, lvl, cd: 0 });
         };
-        const gauntlet = (z0, h, i) => {
+        const gauntlet = (z0, h, i, col, acc) => {
             const L = 44, cC = z0 - L / 2;
             B(-8, h - 8, cC, 2, 64, L); B(8, h - 8, cC, 2, 64, L); B(0, h + 24, cC, 18, 2, L);
             B(0, h - 2, z0 - 4, 14, 4, 8, true);                                   // start ledge
             B(0, h - 2, z0 - 41, 14, 4, 6, true);                                  // landing
             // the abyss: no floor at all — a fall is fatal. Glow lines deep down sell the depth
-            [-6.94, 6.94].forEach(x => { for (const dy of [6, 16, 30]) api.decorStrip(x, h - dy, z0 - 23, 0.06, 0.1, 28, dy > 20 ? 0x5a0f22 : 0xff2a6d); api.decorStrip(x, h + 7.5, cC, 0.06, 0.14, L - 2, 0xffa826); });
+            [-6.94, 6.94].forEach(x => { for (const dy of [6, 16, 30]) api.decorStrip(x, h - dy, z0 - 23, 0.06, 0.1, 28, dy > 20 ? 0x5a0f22 : 0xff2a6d); api.decorStrip(x, h + 7.5, cC, 0.06, 0.14, L - 2, acc); api.decorStrip(x, h + 3.5, cC, 0.06, 0.08, L - 2, col); });
+            api.arenaEmblem(z0 - 4, acc, h);                                       // lit in the floor's second colour
             B(0, h - 12, z0 - 8.5, 14, 10, 1, false); B(0, h - 12, z0 - 37.5, 14, 10, 1, false);   // ledge faces going down (below the point of no return)
             api.decorStrip(0, h + 0.03, z0 - 7.85, 14, 0.04, 0.2, 0xffa826); api.decorStrip(0, h + 0.03, z0 - 38.15, 14, 0.04, 0.2, 0xffa826);   // edge warnings
             // staggered platforms (zig-zag, rising then falling): 2–4.5 m gaps
-            const P = [[-3, z0 - 12, 0], [2.5, z0 - 18.5, 0.8], [-2, z0 - 25, 1.6], [3, z0 - 31.5, 0.8]];
-            P.forEach(([x, z, dy]) => { B(x, h + dy - 0.5, z, 4, 1, 4, true); api.decorStrip(x, h + dy - 1.02, z, 4, 0.05, 4, 0x39d7ff); });
+            const P = [[[-3, 12, 0], [2.5, 18.5, 0.8], [-2, 25, 1.6], [3, 31.5, 0.8]], [[4.5, 12, 0.6], [4.5, 19, 1.8], [-4.5, 24, 2.4], [-4.5, 31.5, 1]], [[0, 12.5, 0], [-4, 19, 1.2], [4, 25.5, 1.2], [0, 32, 0.4]]][i % 3].map(([x, z, y]) => [x, z0 - z, y]);
+            P.forEach(([x, z, dy]) => { B(x, h + dy - 0.5, z, 4, 1, 4, true); api.decorStrip(x, h + dy - 1.02, z, 4, 0.05, 4, col); });
             // spikes on every platform, firing one after another like a wave you have to ride
-            P.forEach(([x, z, dy], k) => popper(x, z, h + dy, 3.4, 3.4, k * 0.55, i));
+            P.forEach(([x, z, dy], k) => { if (i % 3 !== 1 || k % 2) popper(x, z, h + dy, 3.4, 3.4, k * 0.25 * trapPeriod(i), i); });
             roller(z0 - 41.5, h, i * 0.9, i);
             roller(z0 - 5, h, i * 0.9 + 1.6, i);                                   // one guarding the take-off too
             traps.push({ kind: 'pit', x0: -7, x1: 7, z0: z0 - 8, z1: z0 - 38, y: h - 3, h, lvl: i });
@@ -495,8 +502,59 @@ window.AxonLevel = (function () {
             zones.push({ kind: 'gauntlet', x0: -7, x1: 7, z0, z1: z0 - L, y: h, stage: i + 1 });
             return L;
         };
-        const glow = [0x39d7ff, 0xff2a6d, 0xffa826, 0x8f6bff, 0x2fd6c3, 0xff2a6d];
-        const gate = (z, h) => { B(-8, h + 5, z, 4, 14, 2, false, true); B(8, h + 5, z, 4, 14, 2, false, true); B(0, h + 13, z, 12, 2, 2, false, true); };
+        const S = api.decorStrip;
+        const gate = (z, h, col) => { B(-8, h + 5, z, 4, 14, 2, false, true); B(8, h + 5, z, 4, 14, 2, false, true); B(0, h + 13, z, 12, 2, 2, false, true);
+            if (col) { [-5.94, 5.94].forEach(x => S(x, h + 6, z, 0.08, 11.6, 2.1, col)); S(0, h + 11.94, z, 11.8, 0.08, 2.1, col); } };   // the doorway is lit in the colour of the floor behind it
+        // one step (or a slab): top at `top`, front face towards the hero, with a light along its edge
+        const step = (x, w, top, zFront, d, col) => { B(x, top - 2, zFront - d / 2, w, 4, d, true); S(x, top - 0.06, zFront + 0.02, w - 0.3, 0.06, 0.05, col); };
+        // The staircase of a corridor (+3 m over the stretch z0-13 … z0-26), in five forms:
+        //  0 one straight flight · 1 two flights with a landing · 2 twin side stairs round a balcony ·
+        //  3 a switchback (up the left half, across, up the right half) · 4 three short flights with walks between
+        const stairs = (kind, z0, h, col, acc) => {
+            const r = RISE / 8;
+            if (kind === 0) for (let k = 0; k < 8; k++) step(0, 14, h + (k + 1) * r, z0 - 16 - 1.25 * k, 1.25, col);
+            else if (kind === 1) {
+                for (let k = 0; k < 4; k++) step(0, 14, h + (k + 1) * r, z0 - 13 - 1.25 * k, 1.25, col);
+                step(0, 14, h + 4 * r, z0 - 18, 3, acc);                                   // landing
+                for (let k = 0; k < 4; k++) step(0, 14, h + (k + 5) * r, z0 - 21 - 1.25 * k, 1.25, col);
+                [-6.9, 6.9].forEach(x => S(x, h + 4 * r + 1.1, z0 - 19.5, 0.08, 0.08, 3, acc));
+            } else if (kind === 2) {
+                for (const sx of [-1, 1]) for (let k = 0; k < 8; k++) step(sx * 4.75, 4.5, h + (k + 1) * r, z0 - 16 - 1.25 * k, 1.25, col);
+                B(0, h + RISE - 2, z0 - 21, 5, 4, 10, true);                              // the balcony between them
+                S(0, h + RISE * 0.55, z0 - 15.96, 3.4, 1.5, 0.06, acc); S(0, h + RISE + 1, z0 - 16.1, 5, 0.08, 0.08, acc);
+                [-2.5, 2.5].forEach(x => S(x, h + RISE + 1, z0 - 21, 0.08, 0.08, 10, acc));
+            } else if (kind === 3) {
+                B(3.5, h - 2, z0 - 18.5, 7, 4, 5, true);                                                        // the low pocket beside the first flight
+                for (let k = 0; k < 4; k++) step(-3.5, 7, h + (k + 1) * r, z0 - 16 - 1.25 * k, 1.25, col);       // up the left half
+                B(-3.5, h + 4 * r - 2, z0 - 23.5, 7, 4, 5, true);                                               // left landing
+                for (let k = 0; k < 4; k++) step(3.5, 7, h + (k + 5) * r, z0 - 21 - 1.25 * k, 1.25, acc);       // up the right half
+                S(0, h + 4 * r + 0.06, z0 - 23.5, 0.1, 0.05, 5, acc); S(-3.5, h + 4 * r + 0.04, z0 - 23.5, 4.5, 0.04, 0.3, col); S(-1.2, h + 4 * r + 0.04, z0 - 23.5, 0.3, 0.04, 2, col);   // an arrow: turn right
+            } else {
+                let z = z0 - 13, n = 0;
+                for (const m of [3, 3, 2]) { for (let k = 0; k < m; k++, n++) { step(0, 14, h + (n + 1) * r, z, 1, n % 2 ? acc : col); z -= 1; } if (n < 8) { step(0, 14, h + n * r, z, 2.5, col); z -= 2.5; } }
+            }
+            B(0, h + RISE - 2, z0 - 33, 14, 4, 14, true);                                 // upper floor
+        };
+        // lights and trims of a corridor (four styles), following the floor up the stairs
+        const corridorDecor = (style, z0, h, cL, col, acc) => {
+            const yAt = z => h + (z > z0 - 16 ? 0 : z < z0 - 26 ? RISE : RISE * (z0 - 16 - z) / 10), cC = z0 - cL / 2;
+            if (style === 0) [-6.94, 6.94].forEach(x => { S(x, h + 2.6, z0 - 8, 0.06, 0.1, 14, acc); S(x, h + RISE + 2.6, z0 - 33, 0.06, 0.1, 12, acc); S(x, h + 5.2, cC, 0.06, 0.1, cL - 2, col); S(x, h + 7.5, cC, 0.06, 0.14, cL - 2, col); });
+            else if (style === 1) for (let z = z0 - 3; z > z0 - cL + 1; z -= 5) { [-6.94, 6.94].forEach(x => S(x, yAt(z) + 5.5, z, 0.06, 10, 0.22, col)); S(0, yAt(z) + 10.6, z, 13.8, 0.1, 0.22, acc); }
+            else if (style === 2) for (let z = z0 - 4, k = 0; z > z0 - cL + 2; z -= 6, k++) [-6.94, 6.94].forEach((x, q) => S(x, yAt(z) + ((k + q) % 2 ? 6.2 : 3.2), z, 0.06, 1.7, 3.2, (k + q) % 2 ? acc : col));
+            else { for (let z = z0 - 2; z > z0 - cL + 1; z -= 2) [-6.94, 6.94].forEach(x => S(x, yAt(z) + 0.7, z, 0.06, 0.16, 0.5, acc)); for (let z = z0 - 6; z > z0 - cL; z -= 9) S(0, yAt(z) + 8.5, z, 13.8, 0.14, 0.14, col); [-6.94, 6.94].forEach(x => S(x, h + 7.5, cC, 0.06, 0.14, cL - 2, col)); }
+            S(0, h + 22.94, cC, 3, 0.06, cL - 4, 0xbff4ff);
+        };
+        // an arena: pylons of light in its corners, banners down the side walls, a frame on the floor (three styles)
+        const arenaDecor = (style, aC, h, half, col, acc) => {
+            for (const sx of [-1, 1]) for (const sz of [-1, 1]) S(sx * (half - 1.2), h + 9, aC + sz * (half - 1.2), 0.5, 18, 0.5, acc);
+            [-(half) + 0.06, half - 0.06].forEach(x => {
+                S(x, h + 9, aC, 0.06, 0.2, half * 2 - 4, col);
+                if (style === 0) for (let z = -half + 8; z < half - 6; z += 12) S(x, h + 13, aC + z, 0.06, 9, 2.4, (z / 12 | 0) % 2 ? col : acc);            // banners
+                else if (style === 1) for (const y of [3, 15, 21]) S(x, h + y, aC, 0.06, 0.12, half * 2 - 4, y === 15 ? acc : col);                             // rails
+                else for (let z = -half + 6; z < half - 4; z += 8) S(x, h + 6 + ((z / 8 | 0) % 2 ? 5 : 0), aC + z, 0.06, 2.2, 4, (z / 8 | 0) % 2 ? acc : col);   // panels
+            });
+            const f = half * 0.62; [[0, f, f * 2, 0.14], [0, -f, f * 2, 0.14], [f, 0, 0.14, f * 2], [-f, 0, 0.14, f * 2]].forEach(([x, z, w, d]) => S(x, h + 0.04, aC + z, w, 0.04, d, col));
+        };
         const pickType = i => {
             const r = Math.random(), heavy = Math.min(0.42, i * 0.09), drone = 0.36;
             return r < heavy ? 'heavy' : r < heavy + drone ? 'drone' : 'runner';
@@ -507,22 +565,27 @@ window.AxonLevel = (function () {
         zones.push({ kind: 'start', x0: -15, x1: 15, z0: 15, z1: -15, y: 0, stage: 0 });
         let zc = -15, h = 0, bossEntryZ = 0, bossCenter = null, bossHalf = 0, bossY = 0;
         for (let i = 0; i < STAGES; i++) {
-            const col = glow[i % glow.length], last = i === STAGES - 1;
-            gate(zc, h); zc -= 1;
-            // corridor with a staircase in the middle
-            const cL = 40, cC = zc - cL / 2;
-            B(0, h - 2, zc - 8, 14, 4, 16, true);                                    // lower floor
-            for (let k = 0; k < 8; k++) { const top = h + (k + 1) * (RISE / 8); B(0, top - 2, zc - 16 - 1.25 * k - 0.625, 14, 4, 1.25, true); }
-            B(0, h + RISE - 2, zc - 33, 14, 4, 14, true);                            // upper floor
-            B(-8, h + 9.5, cC, 2, 27, cL); B(8, h + 9.5, cC, 2, 27, cL); B(0, h + 24, cC, 18, 2, cL);
-            B(-3.5, h + 0.75, zc - 7, 5, 2.5, 2.5, true);                            // low cover
-            [-6.94, 6.94].forEach(x => { api.decorStrip(x, h + 7.5, cC, 0.06, 0.14, cL - 2, col); api.decorStrip(x, h + 1.2, zc - 8, 0.06, 0.08, 14, 0x1d6fb8); });
-            api.decorStrip(0, h + 22.94, cC, 3, 0.06, cL - 4, 0xbff4ff);
-            zones.push({ kind: 'corridor', x0: -7, x1: 7, z0: zc, z1: zc - cL, y: h, stage: i + 1 });
-            const nC = Math.min(6, 2 + Math.floor(i / 2));
-            for (let e = 0; e < nC; e++) new api.Enemy(api.rand(-4, 4), h, zc - 4 - api.rand(0, 9), pickType(i), i);
-            zc -= cL; h += RISE;
-            gate(zc, h); if (last) bossEntryZ = zc;
+            const [col, acc] = THEME[i % THEME.length], last = i === STAGES - 1;
+            gate(zc, h, col); zc -= 1;
+            // between the arenas: a plain corridor with a staircase, or one of the chambers of sectors.js
+            // (Z-hall with stairs across the building, ladder shaft, tower) — mirrored on its second visit
+            const SEC = window.AxonSectors, sk = SEC ? SEC.PLAN[i] : 0;
+            let cL = 40, rise = RISE, cw = 7;
+            if (sk) { const r = SEC.build(sk, { api, B, S, z0: zc, h, col, acc, i, m: i > 4 ? -1 : 1, traps, popper }); cL = r.L; rise = r.rise; cw = r.half; }
+            else {
+                const cC = zc - cL / 2;
+                B(0, h - 2, zc - 8, 14, 4, 16, true);                                    // lower floor
+                stairs([1, 3, 2][i >> 2] || 0, zc, h, col, acc);
+                B(-8, h + 9.5, cC, 2, 27, cL); B(8, h + 9.5, cC, 2, 27, cL); B(0, h + 24, cC, 18, 2, cL);
+                B(-3.5, h + 0.75, zc - 7, 5, 2.5, 2.5, true);                            // low cover
+                corridorDecor(i % 4, zc, h, cL, col, acc);
+                api.arenaEmblem(zc - 8, col, h);                                         // the corridor has its own light, in the floor's colour
+                const nC = Math.min(6, 2 + Math.floor(i / 2));
+                for (let e = 0; e < nC; e++) new api.Enemy(api.rand(-4, 4), h, zc - 4 - api.rand(0, 9), pickType(i), i);
+            }
+            zones.push({ kind: 'corridor', x0: -cw, x1: cw, z0: zc, z1: zc - cL, y: h, stage: i + 1 });
+            zc -= cL; h += rise;
+            gate(zc, h, acc); if (last) { bossEntryZ = zc; if (SEC) SEC.eyeDoor(api, zc, h, traps); }   // the guardian's door has an eye (sectors.js)
             zc -= 1;
             // arena (the last one is the boss chamber)
             const aS = last ? 84 : 60 + i * 4, aC = zc - aS / 2, half = aS / 2;
@@ -530,15 +593,21 @@ window.AxonLevel = (function () {
             B(-(half + 1), h + 15, aC, 2, 38, aS); B(half + 1, h + 15, aC, 2, 38, aS);
             [zc + 1, zc - aS].forEach(zE => [-1, 1].forEach(s => { const w = half + 2 - 10; B(s * (10 + w / 2), h + 15, zE, w, 38, 2); }));
             if (last) B(0, h + 15, zc - aS, 20, 38, 2);                              // boss chamber is sealed at the far end
-            const covers = last ? [[-18, -14], [18, -14], [-18, 14], [18, 14]] : [[-10, 5], [10, -5], [0, -15], [api.rand(-18, 18), api.rand(-20, 20)]];
+            const covers = last ? [[-18, -14], [18, -14], [-18, 14], [18, 14]] : [[-10, 5], [10, -5], [0, -15], [i % 2 ? -18 : 18, 17]];
             covers.forEach(([x, z], k) => { const ht = last ? 7 : (k === 3 ? 5.5 : 2.5 + (k % 2) * 1.5); B(x, h + (ht - 1) / 2, aC + z, last ? 5 : 7, ht + 1, last ? 5 : 6, true); });
-            [-(half) + 0.06, half - 0.06].forEach(x => api.decorStrip(x, h + 9, aC, 0.06, 0.2, aS - 4, col));
+            arenaDecor(i % 3, aC, h, half, col, acc);
             api.arenaEmblem(aC, last ? 0xff2a6d : col, h);
             if (last) { bossCenter = new THREE.Vector3(0, h, aC); bossHalf = half; bossY = h; zones.push({ kind: 'boss', x0: -half, x1: half, z0: zc, z1: zc - aS, y: h, stage: i + 1 }); }
             else {
                 zones.push({ kind: 'arena', x0: -half, x1: half, z0: zc, z1: zc - aS, y: h, stage: i + 1 });
                 const nA = Math.min(8, 3 + i), nW = 2 + Math.floor(i / 2), before = api.enemies.length;
-                for (let e = 0; e < nA; e++) new api.Enemy(api.rand(-half + 8, half - 8), h, aC - api.rand(-half + 12, half - 8), pickType(i + 1), i);
+                for (let e = 0; e < nA; e++) {                                       // three formations: a line across, a pincer from both sides, a ring round the middle
+                    const u = nA > 1 ? e / (nA - 1) - 0.5 : 0, f = i % 3, ang = e * 6.283 / nA, t = pickType(i + 1);
+                    const x = f === 0 ? u * (half * 1.2) : f === 1 ? (e % 2 ? 1 : -1) * (half - 9) : Math.cos(ang) * half * 0.5;
+                    const z = f === 0 ? -half * 0.2 - (e % 2) * 6 : f === 1 ? half * 0.4 - (e >> 1) * 9 : Math.sin(ang) * half * 0.5 - 4;
+                    let ex = x + api.rand(-1.5, 1.5), ez = z; for (let n = 0; n < 2; n++) for (const [cx, cz] of covers) if (Math.abs(ex - cx) < 5.6 && Math.abs(ez - cz) < 5.2) ez -= 8.5;   // never inside a cover block
+                    new api.Enemy(ex, h, aC + ez, t, i);
+                }
                 const wave1 = api.enemies.slice(before), wave2 = [];
                 for (let e = 0; e < nW; e++) {
                     const en = new api.Enemy(api.rand(-half + 6, half - 6), h, aC + api.rand(-half + 8, half - 8), pickType(i + 2), i + 1);
@@ -547,13 +616,16 @@ window.AxonLevel = (function () {
                 arenas.push({ i, h, half, cz: aC, entryZ: zc + 1, exitZ: zc - aS, wave1, wave2, state: 'idle' });
             }
             zc -= aS;
-            if (!last) { gate(zc, h); zc -= 1; zc -= gauntlet(zc, h, i); }   // exit frame → gauntlet → next corridor's gate
+            if (!last) { gate(zc, h, acc); zc -= 1; zc -= gauntlet(zc, h, i, col, acc); }   // exit frame → gauntlet → next corridor's gate
         }
         return { zones, arenas, traps, stages: STAGES, startZ: 0, endZ: zc, top: h, bossEntryZ, bossCenter, bossHalf, bossY };
     }
 
     // ---------------------------------------------------------------
     // SENTINEL-Ω: the final guardian. Three attacks, and a second phase under 50% HP.
+    //   It never stands still: it circles you with a heavy, stomping walk (the floor shakes at every footfall), leans
+    //   into its turns, keeps both cannons trained on you (they kick back when they fire), and in phase 2 side-steps
+    //   on its thrusters. A hit makes it flinch; when it falls it sinks to its knees between the explosions.
     //   volley — fans of energy orbs      slam — leaps and sends a shockwave ring (jump or dash through it)
     //   charge — glows, then rushes you   phase 2 — faster, wider volleys, calls two drones once
     // ---------------------------------------------------------------
@@ -561,11 +633,12 @@ window.AxonLevel = (function () {
         const dark = () => new THREE.MeshStandardMaterial({ color: 0x1a1d27, metalness: 0.8, roughness: 0.34 });
         return class Boss {
             constructor(center, half) {
-                this.type = 'boss'; this.name = 'SENTINEL-Ω'; this.isDead = false; this.active = false;
+                window.AxonBossRef = this; this.type = 'boss'; this.name = 'SENTINEL-Ω'; this.isDead = false; this.active = false;
                 this.maxHp = this.hp = 1500; this.center = center.clone(); this.half = half;
                 this.body = { r: 2.2, off: 0, h: 6.5 }; this.touchR = 0; this.meleeR = 4.6;
                 this.mesh = new THREE.Group(); this.mesh.position.set(center.x, center.y, center.z - half * 0.45); api.scene.add(this.mesh);
                 this.vel = new THREE.Vector3(); this.state = 'idle'; this.t = 0; this.cool = 2.5; this.flash = 0; this.phase = 1; this.called = false;
+                this.strafe = 1; this.strafeT = 2; this.hop = 0; this.walk = 0; this.stepS = 0; this.flinch = 0; this.from = new THREE.Vector3(); this.land = new THREE.Vector3();
                 this.mats = [];
                 const mk = m => { this.mats.push(m); m.userData.e = (m.emissive || new THREE.Color()).clone(); m.userData.ei = m.emissiveIntensity || 0; return m; };
                 const armor = mk(dark()), plate = mk(new THREE.MeshStandardMaterial({ color: 0x3a3f4d, metalness: 0.7, roughness: 0.3 }));
@@ -614,7 +687,7 @@ window.AxonLevel = (function () {
             }
             aimPoint(out) { const p = out ? out.copy(this.mesh.position) : this.mesh.position.clone(); p.y += 4.3; return p; }
             hitRadius() { return 2.7; }
-            activate() { if (this.active) return; this.active = true; this.cool = 1.5; api.shake(0.6); api.AudioSys.playExplode(); }
+            activate() { if (this.active) return; this.active = true; this.cool = 2.6; api.shake(0.6); api.AudioSys.playExplode(); const BI = window.AxonBossIntro; if (BI) { this.intro = true; BI.begin(this); } else if (window.AxonWarning) window.AxonWarning.show(); }   // WARNING → dialogue → life bar fills → fight (winner.js)
             face(player, dt, rate = 4) {
                 const d = _dir.subVectors(player.mesh.position, this.mesh.position);
                 let a = Math.atan2(d.x, d.z) - this.mesh.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a));
@@ -632,7 +705,7 @@ window.AxonLevel = (function () {
                         const m = api.orbMesh(); m.scale.setScalar(1.05);
                         m.position.copy(from); api.scene.add(m); api.enemyShots.push({ mesh: m, dir, life: 3.5, dmg: 8 });
                     }
-                    api.spawnFlash(from, 0xff4a7a, 1.4, 0.12);
+                    api.spawnFlash(from, 0xff4a7a, 1.4, 0.12); g.position.z = -0.5;                     // the cannon kicks back
                 });
                 api.AudioSys.playBigShot();
             }
@@ -643,6 +716,10 @@ window.AxonLevel = (function () {
                 this.core.scale.setScalar(1 + Math.sin(time * 6) * 0.08);
                 this.updateShocks(dt, api.localPlayer || player);   // each device checks its own hero against the rings
                 if (!this.active) { this.root.position.y = Math.sin(time * 1.5) * 0.05; return; }
+                if (this.intro) {                                                                   // warning, the talk, the life bar filling: it only watches you
+                    if (window.AxonBossIntro.tick(this, dt, api)) { this.intro = false; this.cool = 1.2; }
+                    else { const q = player.mesh.position, P0 = this.mesh.position; this.mesh.rotation.y = Math.atan2(q.x - P0.x, q.z - P0.z); this.root.position.y = Math.sin(time * 1.5) * 0.05; return; }
+                }
                 if (this.phase === 1 && this.hp < this.maxHp / 2) {
                     this.phase = 2; api.shake(0.7); api.AudioSys.playBossRoar(); api.spawnShockwave(this.mesh.position.clone().setY(this.mesh.position.y + 0.1), 0xff2a6d, 14);
                     if (!this.called) { this.called = true; [-1, 1].forEach(s => new api.Enemy(this.center.x + s * 14, this.center.y, this.center.z, 'drone', 6)); }
@@ -651,16 +728,23 @@ window.AxonLevel = (function () {
                 const d = new THREE.Vector3(pp.x - P.x, 0, pp.z - P.z), dist = d.length(); d.normalize();
                 const fast = this.phase === 2 ? 1.35 : 1;
                 this.t += dt;
-                let move = 0;
+                let move = 0, side = 0;
                 switch (this.state) {
                     case 'idle':
                         this.face(player, dt);
                         move = dist > 15 ? 5 * fast : dist < 8 ? -4 : 0;
+                        // circles its prey, changing direction now and then; in phase 2 some of those turns are a thruster side-step
+                        if ((this.strafeT -= dt) <= 0) { this.strafeT = 1.8 + Math.random() * 2.2; this.strafe = -this.strafe; if (this.phase === 2 && Math.random() < 0.55) { this.hop = 0.32; api.AudioSys.playBossLeap(); } }
+                        side = this.strafe * (this.hop > 0 ? 21 : 3.2 * fast);
+                        if (this.hop > 0) { this.hop -= dt; api.spawnSparks(P.clone().setY(P.y + 4.2), 0xffc24a, 2, 7); }
                         this.cool -= dt * fast;
                         if (this.cool <= 0) {
                             const r = Math.random();
                             this.state = r < 0.4 ? 'volley' : r < 0.72 ? 'slam' : (dist > 9 ? 'charge' : 'volley');
-                            this.t = 0; this.shots = 0; this.target = pp.clone();
+                            this.t = 0; this.shots = 0; this.target = pp.clone(); this.hop = 0;
+                            // a slam is a leap ONTO you: it lands where you stood when it crouched (never inside a pillar, never outside the chamber)
+                            const L = Math.min(dist, 20), m = this.half - 5; this.from.copy(P); this.land.set(Math.max(this.center.x - m, Math.min(this.center.x + m, P.x + d.x * L)), P.y, Math.max(this.center.z - m, Math.min(this.center.z + m, P.z + d.z * L)));
+                            if (api.spotBlocked(this.land.x, this.land.z, this.body.r + 0.3, P.y + 0.5, P.y + this.body.h)) this.land.copy(P);
                             if (this.state === 'slam') api.AudioSys.playBossLeap(); else if (this.state === 'charge') api.AudioSys.playBossCharge();
                         }
                         break;
@@ -672,8 +756,8 @@ window.AxonLevel = (function () {
                     case 'slam': {
                         // telegraph → leap → land with a shockwave ring
                         const up = 0.55 / fast, air = 0.5 / fast;
-                        if (this.t < up) { this.root.position.y = -0.6 * (this.t / up); this.warnAt(P, 22, this.t / up); }
-                        else if (this.t < up + air) { const k = (this.t - up) / air; this.root.position.y = Math.sin(k * Math.PI) * 6; }
+                        if (this.t < up) { this.root.position.y = -0.6 * (this.t / up); this.warnAt(this.land, 6 + 3 * (this.t / up), this.t / up); }   // the ring shows where it comes down
+                        else if (this.t < up + air) { const k = (this.t - up) / air, e = k * k * (3 - 2 * k); this.root.position.y = Math.sin(k * Math.PI) * 7; P.x = this.from.x + (this.land.x - this.from.x) * e; P.z = this.from.z + (this.land.z - this.from.z) * e; this.warnAt(this.land, 9, 0.5 + k); }
                         else if (!this.landed) {
                             this.landed = true; this.root.position.y = 0; api.shake(0.8); api.AudioSys.playExplode();
                             api.spawnShockwave(P.clone().setY(P.y + 0.1), 0xff2a6d, 10);
@@ -699,13 +783,25 @@ window.AxonLevel = (function () {
                         break;
                     }
                 }
-                if (move) { this.vel.set(d.x * move, 0, d.z * move); api.moveBody(P, this.vel, dt, this.body.r, 0, this.body.h, 0.3, false); }
+                if (move || side) { this.vel.set(d.x * move - d.z * side, 0, d.z * move + d.x * side); api.moveBody(P, this.vel, dt, this.body.r, 0, this.body.h, 0.3, false); }
                 // keep inside the chamber
                 P.x = Math.max(this.center.x - this.half + 3, Math.min(this.center.x + this.half - 3, P.x));
                 P.z = Math.max(this.center.z - this.half + 3, Math.min(this.center.z + this.half - 3, P.z));
-                // stomping walk
-                const walk = this.state === 'idle' && move ? Math.sin(time * 6) : 0;
-                this.legs[0].rotation.x = walk * 0.35; this.legs[1].rotation.x = -walk * 0.35;
+                // stomping walk: the stride follows its real speed, the body rises on every step, each footfall shakes the floor
+                const hov = this.hop > 0, sp = this.state === 'idle' ? Math.min(1, Math.hypot(move, side) / 4) : 0, R = this.root, e = Math.min(1, dt * 7);
+                this.walk += dt * (2.2 + sp * 3.2);
+                const sw = hov ? 0 : Math.sin(this.walk) * sp, tuck = hov ? 0.55 : 0;
+                this.legs[0].rotation.x = sw * 0.5 + tuck; this.legs[1].rotation.x = -sw * 0.5 + tuck;
+                if (this.state === 'idle' || this.state === 'volley') R.position.y += ((hov ? 0.6 : Math.abs(Math.cos(this.walk)) * 0.16 * sp + Math.sin(time * 1.6) * 0.04) - R.position.y) * e;
+                const foot = Math.sign(sw);
+                if (sp > 0.3 && foot && foot !== this.stepS) { this.stepS = foot; if (dist < 45) { api.shake(0.1); try { api.AudioSys.playHeavyStep(dist, 0); } catch (err) { } } }
+                // it leans into what it does: sideways into a turn, forward into a rush, back when it is hit
+                this.flinch = Math.max(0, this.flinch - dt * 3);
+                const leanX = (this.state === 'charge' && this.t > 0.75 / fast && this.t < 0.75 / fast + 0.8 ? 0.3 : this.state === 'idle' ? move * 0.014 : 0) - this.flinch;
+                R.rotation.x += (leanX - R.rotation.x) * e; R.rotation.z += ((this.state === 'idle' ? -side * (hov ? 0.012 : 0.03) : 0) - R.rotation.z) * e;
+                // both cannons stay on the hero, and settle back after a shot
+                const aim = Math.max(-0.5, Math.min(0.6, Math.atan2(P.y + 4.55 - (pp.y + 1.4), Math.max(5, dist))));
+                for (const g of this.arms) { g.rotation.x += (aim - g.rotation.x) * e; g.position.z += (0 - g.position.z) * Math.min(1, dt * 9); }
                 // body contact
                 if (dist < 3.2 && Math.abs(pp.y - P.y) < 4 && this.state !== 'charge') player.takeDamage(10);
             }
@@ -730,10 +826,10 @@ window.AxonLevel = (function () {
                 }
             }
             takeDamage(amount, at, crit) {
-                if (this.isDead || !this.active) return;
-                this.hp -= amount; Feedback.hit(this, amount, at, crit, true); api.AudioSys.playHit(); this.flash = 0.07;
-                this.mats.forEach(m => { if (m.emissive) { m.emissive.setHex(0xffffff); m.emissiveIntensity = 1.2; } });
-                api.spawnSparks(at || this.aimPoint(), 0xffd27a, 8, 12);
+                if (this.isDead || !this.active || this.intro) return;
+                this.hp -= amount; Feedback.hit(this, amount, at, crit, true); api.AudioSys.playHit();
+                const hp = at || this.aimPoint(); api.spawnFlash(hp, 0xffffff, 0.8, 0.12); api.spawnSparks(hp, 0xffd27a, 8, 12);   // white only where it was struck
+                this.flinch = Math.min(0.2, this.flinch + 0.05 + amount * 0.003);
                 if (this.hp <= 0) this.die();
             }
             die() {
@@ -741,12 +837,14 @@ window.AxonLevel = (function () {
                 this.shocks.forEach(s => { api.scene.remove(s.m); api.scene.remove(s.wall); }); this.shocks = [];
                 const i = api.enemies.indexOf(this); if (i > -1) api.enemies.splice(i, 1);
                 api.onKill(this);
+                if (window.AxonWinner) window.AxonWinner.preload();
                 let n = 0;
                 const boom = () => {
                     const p = this.aimPoint().add(new THREE.Vector3(api.rand(-2, 2), api.rand(-2.5, 2), api.rand(-1.5, 1.5)));
                     api.spawnFlash(p, 0xffc070, 3.5, 0.3); api.spawnSparks(p, 0xff9a3c, 26, 20); api.AudioSys.playExplode(); api.shake(0.7);
+                    this.root.position.y -= 0.22; this.root.rotation.x += 0.07; this.legs.forEach(l => { l.rotation.x -= 0.11; });   // sinks to its knees
                     if (++n < 7) setTimeout(boom, 180);
-                    else { api.spawnShockwave(this.mesh.position.clone().setY(this.mesh.position.y + 0.1), 0xffa826, 18); api.scene.remove(this.mesh); api.onBossDown(this); }
+                    else { api.spawnShockwave(this.mesh.position.clone().setY(this.mesh.position.y + 0.1), 0xffa826, 18); api.scene.remove(this.mesh); api.onBossDown(this); if (window.AxonWinner) window.AxonWinner.show({ sub: this.name, hold: 4 }); }   // the guardian is down: WINNER, and the victory march
                 };
                 api.hitStop(0.25); boom();
             }
@@ -905,16 +1003,25 @@ window.AxonLevel = (function () {
     // spiked rollers sweeping across the landing (jump them), and the pits (fall = damage + back to the ledge).
     // ---------------------------------------------------------------
     function makeTraps(api, layout) {
-        let t = 0; const T = 2.2;
+        let t = 0, zi = 0; const fogBase = new THREE.Color(0x3a1e12), fogTo = new THREE.Color(0x3a1e12), fogC = new THREE.Color();   // the facility's own air: a warm rust haze, not the HQ's navy
+        let lit = false;
         return {
             update(player, dt) {
                 t += dt;
-                const p = player.mesh.position;
+                if (!lit) { lit = true; const hm = api.scene.children.find(o => o.isHemisphereLight); if (hm) { hm.color.setHex(0xffd9b0); hm.groundColor.setHex(0x3a2214); hm.intensity = 0.95; } api.scene.children.forEach(o => { if (o.isAmbientLight) o.color.setHex(0x4a3020); else if (o.isDirectionalLight) o.color.setHex(0xffe0b8); }); }   // warm light instead of the HQ's blue
+                const p = player.mesh.position, Z = layout.zones;
+                if (window.AxonSectors) window.AxonSectors.settle(api, p, dt);
+                if (window.AxonFoes) window.AxonFoes.tick(api, player, dt);                        // wreckage, telegraphs, contact shadows (foes.js)
+                if (window.AxonPolish) window.AxonPolish.tick(api, player, layout, dt);          // mission card, area banners, results (polish.js)
+                if (window.AxonComm) window.AxonComm.tick(api, player, layout, dt);              // Kendel on the radio (comm.js)                 // gravity for walkers, enemies keep apart
+                while (zi < Z.length - 1 && p.z < Z[zi].z1) zi++; while (zi > 0 && p.z > Z[zi].z0) zi--;
+                const st = Z[zi].stage; if (st) fogTo.copy(fogBase).lerp(fogC.setHex(THEME[(st - 1) % THEME.length][Z[zi].kind === 'gauntlet' ? 1 : 0]), 0.12); else fogTo.copy(fogBase);
+                api.scene.fog.color.lerp(fogTo, Math.min(1, dt * 1.5)); if (api.scene.background && api.scene.background.isColor) api.scene.background.copy(api.scene.fog.color);
                 for (const tr of layout.traps) {
                     if (tr.cd > 0) tr.cd -= dt;
                     if (tr.kind === 'pop') {
-                        const ph = (t + tr.off) % T, warn = ph > 0.95 && ph < 1.3, up = ph >= 1.3;
-                        const k = up ? Math.min(1, (ph - 1.3) / 0.06) : warn ? 0.12 : 0;
+                        const T = trapPeriod(tr.lvl), upAt = T - 1, ph = (t + tr.off) % T, warn = ph > upAt - 0.6 && ph < upAt, up = ph >= upAt;
+                        const k = up ? Math.min(1, (ph - upAt) / 0.08) : warn ? 0.12 : 0;
                         tr.mesh.position.y = tr.top - 0.8 + k * 0.8;
                         tr.pm.emissiveIntensity = up ? 2.2 : warn ? 1 + Math.sin(t * 40) * 0.8 : 0.25;
                         if (up && !tr.was && Math.abs(p.z - tr.z) < 25) api.AudioSys.playTone('square', 340, 90, 0.08, 0.04);
@@ -923,11 +1030,13 @@ window.AxonLevel = (function () {
                             tr.cd = 0.6; player.takeDamage(Math.round(22 * (1 + 0.1 * tr.lvl))); player.velocity.y = 14;
                         }
                     } else if (tr.kind === 'roll') {
-                        const x = Math.sin((t + tr.off) * (2.6 + 0.08 * tr.lvl)) * 5.6; tr.mesh.position.x = x;
+                        const x = Math.sin((t + tr.off) * rollerSpeed(tr.lvl)) * 5.6; tr.mesh.position.x = x;
                         if (tr.cd <= 0 && Math.abs(p.x - x) < 1.5 && Math.abs(p.z - tr.z) < 0.95 && p.y < tr.top + 1.1 && p.y > tr.top - 0.6) {
                             tr.cd = 0.6; player.takeDamage(Math.round(24 * (1 + 0.1 * tr.lvl))); player.velocity.y = 12; p.z += p.z > tr.z ? 1.2 : -1.2;
                         }
-                    } else if (tr.kind === 'pit') {
+                    } else if (tr.kind === 'eye') window.AxonSectors.eye(tr, player, dt, api);
+                    else if (tr.kind === 'ladder') { window.AxonSectors.climb(tr, player, dt); if (tr.on && (tr.s = (tr.s || 0) - dt) <= 0) { tr.s = 0.24; api.AudioSys.playTone('square', 520, 40, 0.05, 0.03); } }
+                    else if (tr.kind === 'pit') {
                         if (!tr.told && p.z < tr.z0 + 8 && p.z > tr.z1 && Math.abs(p.y - tr.y - 3) < 3) { tr.told = true; if (api.tip) api.tip('traps'); }
                         if (!player.dead && p.z < tr.z0 + 1 && p.z > tr.z1 - 1 && p.x > tr.x0 && p.x < tr.x1 && p.y < tr.h - 6) {
                             player.shieldT = 0; player.takeDamage(99999, true);        // fell into the abyss: that's the run

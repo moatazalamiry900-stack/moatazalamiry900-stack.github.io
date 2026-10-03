@@ -625,18 +625,44 @@ window.AxonPerf = (function () {
     // (a whole crowd of distant enemies = 3 draw calls). Only those inside the camera view are packed in,
     // so anything behind the camera or out of range costs nothing.
     function Impostors(scene, max = 200) {
-        const B = (w, h, d, x, y, z) => ({ geo: new THREE.BoxGeometry(w, h, d), matrix: new THREE.Matrix4().makeTranslation(x, y, z) });
-        const Cy = (r, h, x, y, z) => ({ geo: new THREE.CylinderGeometry(r, r * 1.15, h, 8), matrix: new THREE.Matrix4().makeTranslation(x, y, z) });
-        const drone = (() => {
-            const body = new THREE.SphereGeometry(1.1, 10, 6); body.scale(1, 0.5, 1);
-            const ring = new THREE.TorusGeometry(1.55, 0.09, 4, 20); ring.rotateX(Math.PI / 2);
-            return mergeGeometries([{ geo: body, matrix: new THREE.Matrix4() }, { geo: ring, matrix: new THREE.Matrix4() }, B(0.5, 0.35, 0.3, 0, 0, 1.0)]);
-        })();
-        const runner = mergeGeometries([B(0.8, 0.95, 0.5, 0, 1.5, 0), B(0.42, 0.42, 0.42, 0, 2.2, 0), B(0.5, 1.05, 0.35, 0, 0.55, 0), B(1.3, 0.22, 0.3, 0, 1.8, 0)]);
-        const heavy = mergeGeometries([B(2.2, 1.6, 1.4, 0, 1.75, 0), Cy(0.45, 1.7, -1.5, 1.3, 0), Cy(0.45, 1.7, 1.5, 1.3, 0), B(1.9, 1.0, 1.0, 0, 0.5, 0), B(0.9, 0.5, 0.6, 0, 2.8, 0.2)]);
-        const mat = (color, emissive) => new THREE.MeshLambertMaterial({ color, emissive });
+        // A real low-detail model of each unit, in its own colours (dark frame, steel, hazard armour, red lights):
+        // every part is a few triangles with a vertex colour, all parts of a type in ONE instanced mesh.
+        const DK = 0x0a0d14, ST = 0x3c434d, HZ = 0xb85016, RD = 0xff2238, _c = new THREE.Color();
+        const build = parts => {
+            let nv = 0, ni = 0; const gs = parts.map(([g, col, m]) => { const q = g.index ? g.toNonIndexed() : g.clone(); if (m) q.applyMatrix4(m); nv += q.attributes.position.count; return [q, col]; });
+            const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), colr = new Float32Array(nv * 3); let o = 0;
+            for (const [q, col] of gs) { pos.set(q.attributes.position.array, o * 3); nor.set(q.attributes.normal.array, o * 3); _c.setHex(col); const k = col === RD ? 1.7 : 1; for (let v = 0; v < q.attributes.position.count; v++) { colr[(o + v) * 3] = _c.r * k; colr[(o + v) * 3 + 1] = _c.g * k; colr[(o + v) * 3 + 2] = _c.b * k; } o += q.attributes.position.count; }
+            const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.BufferAttribute(colr, 3)); return g;
+        };
+        const X = (x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
+        const B = (w, h, d, col, x, y, z, rx, ry, rz) => [new THREE.BoxGeometry(w, h, d), col, X(x, y, z, rx, ry, rz)];
+        const C = (rt, rb, h, s, col, x, y, z, rx, ry, rz) => [new THREE.CylinderGeometry(rt, rb, h, s), col, X(x, y, z, rx, ry, rz)];
+        const P2 = Math.PI / 2;
+        const drone = build([
+            [new THREE.SphereGeometry(1.1, 10, 4, 0, Math.PI * 2, 0, P2), ST, X(0, 0.02, 0, 0, 0, 0, 1, 0.4, 1)], [new THREE.SphereGeometry(1.1, 10, 4, 0, Math.PI * 2, P2, P2), DK, X(0, 0.02, 0, 0, 0, 0, 1, 0.38, 1)],
+            [new THREE.TorusGeometry(1.55, 0.08, 4, 18), DK, X(0, 0, 0, P2)], [new THREE.TorusGeometry(1.55, 0.035, 3, 18), RD, X(0, 0.07, 0, P2)],
+            C(0.44, 0.44, 0.34, 8, DK, 0, 0.03, 0.9, P2), [new THREE.SphereGeometry(0.3, 8, 5), RD, X(0, 0.03, 1.04)],
+            C(0.2, 0.2, 0.95, 6, DK, -1.22, -0.05, -0.05, P2), C(0.2, 0.2, 0.95, 6, DK, 1.22, -0.05, -0.05, P2), B(0.3, 0.3, 0.12, RD, -1.22, -0.05, -0.56), B(0.3, 0.3, 0.12, RD, 1.22, -0.05, -0.56),
+            B(0.05, 0.26, 0.5, HZ, 0, 0.42, -0.42, 0.35), B(0.5, 0.04, 0.32, ST, -1.52, -0.05, -0.2), B(0.5, 0.04, 0.32, ST, 1.52, -0.05, -0.2)]);
+        const runner = build([
+            B(0.62, 0.28, 0.42, DK, 0, 1.15, 0), C(0.26, 0.42, 0.7, 6, ST, 0, 1.57, 0, Math.PI, 0, 0), B(0.07, 0.46, 0.05, RD, 0, 1.5, 0.3),
+            B(0.34, 0.2, 0.36, HZ, -0.55, 1.86, 0, 0, 0, 0.4), B(0.34, 0.2, 0.36, HZ, 0.55, 1.86, 0, 0, 0, -0.4),
+            C(0.22, 0.27, 0.4, 6, DK, 0, 2.15, 0), B(0.36, 0.08, 0.1, RD, 0, 2.17, 0.22), B(0.05, 0.16, 0.42, HZ, 0, 2.39, -0.02),
+            B(0.36, 0.44, 0.2, DK, 0, 1.58, -0.36), B(0.04, 0.52, 0.18, HZ, 0, 1.7, -0.5, 0.25),
+            B(0.2, 0.5, 0.2, DK, -0.5, 1.47, 0), B(0.18, 0.46, 0.2, ST, -0.5, 1.03, 0), B(0.2, 0.5, 0.2, DK, 0.5, 1.47, 0), B(0.18, 0.46, 0.2, ST, 0.5, 1.03, 0), B(0.05, 0.95, 0.16, RD, 0.6, 0.55, 0.12, 0.25),
+            B(0.26, 0.56, 0.26, ST, -0.2, 0.87, 0), B(0.22, 0.5, 0.24, DK, -0.2, 0.35, -0.03), B(0.2, 0.1, 0.4, DK, -0.2, 0.05, 0.1), B(0.2, 0.3, 0.1, HZ, -0.2, 0.9, 0.14),
+            B(0.26, 0.56, 0.26, ST, 0.2, 0.87, 0), B(0.22, 0.5, 0.24, DK, 0.2, 0.35, -0.03), B(0.2, 0.1, 0.4, DK, 0.2, 0.05, 0.1), B(0.2, 0.3, 0.1, HZ, 0.2, 0.9, 0.14)]);
+        const heavy = build([
+            B(2.2, 1.6, 1.4, HZ, 0, 1.7, 0), B(1.5, 1.0, 0.2, DK, 0, 1.6, 0.74), B(1.0, 0.12, 0.08, RD, 0, 1.95, 0.86), B(1.9, 0.5, 0.5, HZ, 0, 2.38, 0.58, -0.7), B(1.7, 0.42, 0.4, DK, 0, 1.0, 0.6, 0.6),
+            B(0.9, 0.45, 1.3, DK, -1.3, 2.45, 0, 0, 0, 0.2), B(0.9, 0.45, 1.3, DK, 1.3, 2.45, 0, 0, 0, -0.2), [new THREE.SphereGeometry(0.46, 8, 4, 0, Math.PI * 2, 0, P2), DK, X(0, 2.5, 0.1)], B(0.66, 0.1, 0.12, RD, 0, 2.62, 0.47),
+            B(1.4, 0.9, 0.4, DK, 0, 1.8, -0.86), B(1.0, 0.5, 0.05, RD, 0, 1.75, -1.07), C(0.13, 0.16, 0.9, 6, ST, -0.45, 2.5, -0.9), C(0.13, 0.16, 0.9, 6, ST, 0.45, 2.5, -0.9), B(0.5, 0.4, 0.6, DK, -1.36, 3.0, -0.1, 0, 0, 0.2),
+            C(0.75, 0.86, 0.26, 8, ST, 0, 0.8, 0), B(0.1, 1.2, 1.2, ST, -1.16, 1.62, 0), B(0.1, 1.2, 1.2, ST, 1.16, 1.62, 0),
+            C(0.42, 0.5, 1.7, 8, DK, -1.5, 1.45, 0), C(0.52, 0.52, 0.22, 8, HZ, -1.5, 1.85, 0), C(0.57, 0.57, 0.16, 8, HZ, -1.5, 0.65, 0), C(0.42, 0.5, 1.7, 8, DK, 1.5, 1.45, 0), C(0.52, 0.52, 0.22, 8, HZ, 1.5, 1.85, 0), C(0.57, 0.57, 0.16, 8, HZ, 1.5, 0.65, 0),
+            B(0.7, 0.6, 0.8, DK, -0.7, 0.85, 0), B(0.8, 0.5, 0.9, DK, -0.7, 0.3, 0), B(1.0, 0.2, 1.3, ST, -0.7, 0.1, 0.12), B(0.6, 0.32, 0.3, HZ, -0.7, 0.6, 0.42),
+            B(0.7, 0.6, 0.8, DK, 0.7, 0.85, 0), B(0.8, 0.5, 0.9, DK, 0.7, 0.3, 0), B(1.0, 0.2, 1.3, ST, 0.7, 0.1, 0.12), B(0.6, 0.32, 0.3, HZ, 0.7, 0.6, 0.42)]);
+        const mat = () => new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x0a0608 });
         const mk = (geo, m) => { const im = new THREE.InstancedMesh(geo, m, max); im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(im); return im; };
-        const T = { drone: mk(drone, mat(0x8a93a3, 0x3a0a14)), runner: mk(runner, mat(0x8a93a3, 0x3a0a14)), heavy: mk(heavy, mat(0xb4521e, 0x401208)) };
+        const T = { drone: mk(drone, mat()), runner: mk(runner, mat()), heavy: mk(heavy, mat()) };
         const n = { drone: 0, runner: 0, heavy: 0 }, M = new THREE.Matrix4(), Q = new THREE.Quaternion(), ONE = new THREE.Vector3(1, 1, 1), SPH = new THREE.Sphere(new THREE.Vector3(), 2.6), UP = new THREE.Vector3(0, 1, 0);
         let fr = null;
         this.begin = frustum => { fr = frustum; n.drone = n.runner = n.heavy = 0; };
@@ -735,6 +761,46 @@ window.AxonPerf = (function () {
         dstNodes.forEach(o => { if (o.isSkinnedMesh) o.bind(new THREE.Skeleton(o.skeleton.bones.map(b => dstNodes[ix.get(b)]), o.skeleton.boneInverses), o.bindMatrix); });
     }
 
+    // ---------- sword reach: while a cut is in motion the hero stops a blade's length short of the enemy ----------
+    // (the lunge used to carry him on until the two bodies touched, so he swung from inside the enemy and shoved it along).
+    // Only the part of the velocity that still closes the gap is removed: he can circle, back off or be knocked away freely.
+    // push(e, nx, nz, depth): eases an enemy that has run inside that distance back out (enemies charge into contact by themselves).
+    function holdOff(pos, vel, R, enemies, gap, push) {
+        for (const e of enemies) {
+            if (e.isDead || !e.body) continue;
+            const q = e.mesh.position, dx = pos.x - q.x, dz = pos.z - q.z, d = Math.hypot(dx, dz);
+            if (d >= R + e.body.r + gap || d < 1e-4 || pos.y >= q.y + e.body.off + e.body.h || pos.y + 3 <= q.y + e.body.off) continue;
+            const nx = dx / d, nz = dz / d, vn = vel.x * nx + vel.z * nz;      // < 0 = still closing in
+            if (vn < 0) { vel.x -= nx * vn; vel.z -= nz * vn; }
+            if (push) push(e, nx, nz, R + e.body.r + gap - d);                 // the hero himself is never moved
+        }
+    }
+
+    // ---------- graphics options on top of the tier (Settings → Glow / Shadows / Resolution / Character detail) ----------
+    // 'auto' follows the tier. Phones: the glow (bloom) is OFF unless the player turns it on — on an Adreno 725 it cost about
+    // 40 % of the 1 % lows (15 vs 25 FPS). A fixed resolution never changes during play (no render-target reallocation
+    // hitches); 'auto' = dynamic resolution. Character detail is read by hero.js when it builds the body.
+    function GfxOptions(store, coarse, T) {
+        const KEY = { bloom: 'fxBloom', shadow: 'fxShadow', res: 'fxRes', hero: 'heroDetail' }, v = {};
+        Object.keys(KEY).forEach(k => { v[k] = store.get(KEY[k], 'auto'); });
+        const pick = (o, tier) => o === 'on' ? true : o === 'off' ? false : !!tier;
+        this.bloom = tier => pick(v.bloom, tier && !coarse);
+        this.shadow = tier => pick(v.shadow, tier);
+        this.res = dyn => v.res === 'auto' ? dyn : +v.res;
+        Object.defineProperty(this, 'autoRes', { get: () => v.res === 'auto' });
+        this.tag = () => v.res === 'auto' ? '' : ' · res ' + Math.round(v.res * 100) + '%';
+        // text of a settings row; eff = what 'auto' gives right now (glow / shadows)
+        this.label = (k, eff) => {
+            if (k === 'hero') return v.hero === 'auto' ? T('q_auto') + ' · ' + T(coarse ? 'q_LO' : 'q_HI') : T(v.hero === 'high' ? 'q_HI' : 'q_LO');
+            if (v[k] === 'auto') return T('q_auto') + (k === 'res' ? '' : ' · ' + T(eff ? 'on' : 'off'));
+            return k === 'res' ? Math.round(+v[k] * 100) + '%' : T(v[k]);
+        };
+        this.cycle = k => {
+            const o = k === 'res' ? ['auto', '1', '0.85', '0.7'] : k === 'hero' ? ['auto', 'high', 'low'] : ['auto', 'on', 'off'];
+            v[k] = o[(o.indexOf(v[k]) + 1) % o.length]; store.set(KEY[k], v[k]);
+        };
+    }
+
     // ---------- geometry detail: build a model with fewer segments (phones) ----------
     // withDetail(k, fn): while fn runs, the round primitives (sphere, torus, cylinder, cone, lathe, tube, circle)
     // are created with k × their segment counts (never below a sane minimum, never above what was asked).
@@ -751,7 +817,7 @@ window.AxonPerf = (function () {
             saved[name] = Orig;
             THREE[name] = class extends Orig {
                 constructor(...a) {
-                    Object.keys(spec).forEach(i => { if (typeof a[i] === 'number') a[i] = Math.min(a[i], Math.max(spec[i], Math.round(a[i] * k))); });
+                    Object.keys(spec).forEach(i => { if (typeof a[i] === 'number') a[i] = Math.min(a[i], Math.max(k < 0.4 ? Math.ceil(spec[i] * 0.65) : spec[i], Math.round(a[i] * k))); });   // k < 0.4: background characters, lower minimums
                     super(...a);
                 }
             };
@@ -759,5 +825,6 @@ window.AxonPerf = (function () {
         try { return fn(); } finally { Object.keys(saved).forEach(name => { THREE[name] = saved[name]; }); }
     }
 
-    return { mark, sinceCombat, withDetail, mergeGeometries, mergeStatic, mergeRig, skinRig, rebindClone, Impostors, WorldBatcher, SparkPool, segHit, near, physics, FpsMeter, Display, FrameLimiter, FxPool, DynRes, Quality };
+    return { mark, sinceCombat, withDetail, GfxOptions, holdOff, mergeGeometries, mergeStatic, mergeRig, skinRig, rebindClone, Impostors, WorldBatcher, SparkPool, segHit, near, physics, FpsMeter, Display, FrameLimiter, FxPool, DynRes, Quality };
 })();
+

@@ -80,7 +80,8 @@ window.AxonHero = (function () {
         if (v === 'low') return 0.5;
         return window.matchMedia && window.matchMedia('(pointer: coarse)').matches ? 0.5 : 1;
     }
-    const dseg = (n, min = 1) => Math.min(n, Math.max(min, Math.round(n * DK)));
+    // below 0.4 = background characters (HQ crew, trainees): the minimums drop too, they are never seen up close
+    const dseg = (n, min = 1) => Math.min(n, Math.max(DK < 0.4 ? Math.max(1, Math.ceil(min * 0.6)) : min, Math.round(n * DK)));
 
     // Bevelled box (rounded edges → faceted, sculpted armor plates)
     const rbCache = new Map();
@@ -158,8 +159,8 @@ window.AxonHero = (function () {
         return weaveTex;
     }
 
-    function build(P, type = 'a') {
-        DK = detailK();
+    function build(P, type = 'a', detail) {   // detail: optional segment scale (HQ trainees are built lighter than the hero)
+        DK = detail > 0 ? Math.min(1, detail) : detailK();
         return window.AxonPerf && window.AxonPerf.withDetail ? window.AxonPerf.withDetail(DK, () => buildBody(P, type)) : buildBody(P, type);
     }
     function buildBody(P, type = 'a') {

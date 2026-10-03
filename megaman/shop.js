@@ -39,6 +39,8 @@ window.AxonShop = (function () {
     const REWARD = { drone: 6, runner: 7, heavy: 14, boss: 250 };
     const lv = { power: 0, rapid: 0, charge: 0, saber: 0, armor: 0, core: 0 };
     let credits = 0, api = null, root = null, open = false;
+    // cheat 'unlimited credits' (ui.js): nothing is deducted and everything is affordable; the saved wallet is left untouched
+    const rich = () => !!(window.AxonCheats && window.AxonCheats.on('money')), shown = () => rich() ? '∞' : credits;
 
     // ---------- save: credits, stored supplies and upgrade levels survive restarts ----------
     const SAVE_KEY = 'axon.save';
@@ -167,7 +169,7 @@ window.AxonShop = (function () {
         root.innerHTML = `<div class="sh-panel">
             <div class="sh-head">
               <div class="sh-title"><b>${T('armory')}</b><span>${T('shop_sub')}</span></div>
-              <div class="sh-cr"><i>CR</i><span id="sh-credits">${credits}</span></div>
+              <div class="sh-cr"><i>CR</i><span id="sh-credits">${shown()}</span></div>
               <button class="sh-x" type="button" aria-label="Close">×</button>
             </div>
             <div class="sh-body">
@@ -286,7 +288,7 @@ window.AxonShop = (function () {
         ['medkit', 'cell', 'shield'].forEach((id, i) => {
             const b = slotsEl.children[i], have = inv[id] > 0;
             b.classList.toggle('alert', need[id] && have);
-            if (need[id] && !have && id !== 'shield' && credits >= priceOf(ITEMS.find(x => x.id === id))) shopNeed = true;
+            if (need[id] && !have && id !== 'shield' && (rich() || credits >= priceOf(ITEMS.find(x => x.id === id)))) shopNeed = true;
         });
         const sb = document.getElementById('btn-shop');
         if (sb) sb.classList.remove('alert');
@@ -322,12 +324,12 @@ window.AxonShop = (function () {
         const P = api.player();
         if (it.kind === 'item' && inv[it.id] >= STACK) return 'FULL';
         if (it.kind === 'up' && lv[it.id] >= MAX_LVL) return 'MAX';
-        if (credits < priceOf(it)) return 'POOR';
+        if (!rich() && credits < priceOf(it)) return 'POOR';
         return null;
     }
     function render() {
         if (!root) return;
-        root.querySelector('#sh-credits').textContent = credits;
+        root.querySelector('#sh-credits').textContent = shown();
         root.querySelectorAll('.sh-card').forEach(c => {
             const it = ITEMS.find(i => i.id === c.dataset.id), why = blocked(it), btn = c.querySelector('.sh-buy');
             btn.disabled = !!why; btn.classList.toggle('poor', why === 'POOR');
@@ -338,14 +340,14 @@ window.AxonShop = (function () {
         });
     }
     function showCredits(bump) {
-        const el = document.getElementById('credits'); if (el) el.textContent = credits;
+        const el = document.getElementById('credits'); if (el) el.textContent = shown();
         const b = document.getElementById('btn-shop');
         if (bump && b) { b.classList.remove('bump'); requestAnimationFrame(() => b.classList.add('bump')); }
     }
     function buy(it, card) {
         if (blocked(it)) { api.AudioSys.playDeny(); return; }
         const P = api.player();
-        credits -= priceOf(it);
+        if (!rich()) credits -= priceOf(it);
         if (it.kind === 'item') { inv[it.id]++; showSlots(); }
         else {
             lv[it.id]++; applyUpgrades(false); if (api.onUpgrade) api.onUpgrade(it.id);
@@ -398,15 +400,16 @@ window.AxonShop = (function () {
     }
 
     return {
-        stats, reward, add, alerts, get credits() { return credits; }, get isOpen() { return open; },
+        stats, reward, add, alerts, get credits() { return rich() ? 999999 : credits; }, get wallet() { return credits; }, get isOpen() { return open; },   // credits: what you can spend · wallet: what is really saved
+        refresh() { showCredits(false); if (open) render(); },
         level: id => lv[id] || 0, maxLevel: MAX_LVL, priceOf: id => priceOf(ITEMS.find(i => i.id === id)),
         upgrade(id) {                                                                                  // weapon forge (forge.js)
             const it = ITEMS.find(i => i.id === id); if (!it || it.kind !== 'up' || blocked(it)) return false;
-            credits -= priceOf(it); lv[id]++; applyUpgrades(false); save(); showCredits(true); if (open) render();
+            if (!rich()) credits -= priceOf(it); lv[id]++; applyUpgrades(false); save(); showCredits(true); if (open) render();
             if (api.refreshHud) api.refreshHud(); if (api.onUpgrade) api.onUpgrade(id); return true;
         },
         show() { if (!open) openShop(); },                                                            // HQ armory counter (hub.js)
-        spend(n) { if (!(n >= 0) || credits < n) return false; credits -= n; showCredits(true); if (open) render(); save(); return true; },   // armor studio (hub.js)
+        spend(n) { if (!(n >= 0) || (!rich() && credits < n)) return false; if (!rich()) credits -= n; showCredits(true); if (open) render(); save(); return true; },   // armor studio (hub.js)
         init(a) { api = a; load(); build(); showCredits(false); showSlots(); applyUpgrades(true); if (api.refreshHud) api.refreshHud(); },
         // a mission run: remember the wallet at deploy; dying rolls it back (money, supplies and upgrades bought on the run)
         snapshot() { return JSON.stringify({ credits, inv, lv }); },

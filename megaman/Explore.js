@@ -8,7 +8,9 @@
 //     the more aliens and the tougher they are. Depth has no end.
 //   • Kills pay nothing here — clearing the expedition pays one small prize (so it never makes you rich).
 //     Then two rifts open: GO DEEPER (a brand-new world) or RETURN TO HQ. Your depth is remembered.
-//  Loaded by index.html after outside.js, before game.js.
+//   • Who arrives, in what order and in which formation: see spawnWave here and the wave planner in aliens.js
+//     (packs of motes, carapaces, and a maverick on the last wave from depth 2).
+//  Loaded by index.html after outside.js and aliens.js, before game.js.
 // =====================================================================
 'use strict';
 
@@ -218,10 +220,14 @@ window.AxonExplore = (function () {
 
         // ---------- expedition: waves of aliens ----------
         const drop = e => { if (e.isDead) return; e.isDead = true; scene.remove(e.mesh); const k = c.enemies.indexOf(e); if (k > -1) c.enemies.splice(k, 1); };
+        // The order of battle comes from aliens.js: every wave has a theme (patrol, swarm, siege, armor, and from depth 2
+        // a maverick on the last wave) and is a list of units; a pack of motes is one unit but several enemies.
+        const AL = window.AxonAliens;
         function startRun() {
-            const waves = Math.min(6, 2 + Math.floor((depth - 1) / 2)), total = Math.min(36, 6 + depth * 2), sum = waves * (waves + 1) / 2, per = [];
-            let left = total; for (let k = 0; k < waves; k++) { const n = k === waves - 1 ? left : Math.max(2, Math.round(total * (k + 1) / sum)); per.push(n); left -= n; }
-            run = { waves, per, wave: -1, state: 'intro', t: 3, alive: [], lvl: Math.min(10, Math.floor((depth - 1) / 2)), total };
+            const waves = Math.min(6, 2 + Math.floor((depth - 1) / 2)), budget = Math.min(36, 6 + depth * 2), sum = waves * (waves + 1) / 2, bud = [];
+            let left = budget; for (let k = 0; k < waves; k++) { const n = k === waves - 1 ? left : Math.max(2, Math.round(budget * (k + 1) / sum)); bud.push(n); left -= n; }
+            const plan = AL.plan(depth, bud), per = plan.map(w => AL.count(w, depth)), total = per.reduce((a, b) => a + b, 0);
+            run = { waves, per, plan, wave: -1, state: 'intro', t: 3, alive: [], lvl: Math.min(10, Math.floor((depth - 1) / 2)), total };
             setTimeout(() => { if (on && run) c.toast(S('hostiles', total)); }, 900);
         }
         function alienize(e) {                                                        // recoloured to the world: they belong here, not in the facility
@@ -229,23 +235,35 @@ window.AxonExplore = (function () {
             m[3].color.copy(world.alien);
             m[2].color.copy(world.eye); if (m[2].emissive) m[2].emissive.copy(world.eye); if (m[2].userData && m[2].userData.e) m[2].userData.e.copy(world.eye);
         }
+        // Each kind arrives in its own formation around the hero (a0 = where the wave comes from):
+        //   stalkers in a line from the front, bulwarks behind them, seekers from the rear, packs of motes on both
+        //   flanks, carapaces in an even ring all around, and a maverick alone, front and centre.
         function spawnWave(k) {
             run.wave = k; run.state = 'fight';
-            const n = run.per[k], heavy = Math.min(0.35, 0.05 + depth * 0.02), A = world.A, pp = player.mesh.position;
-            for (let i = 0; i < n; i++) {
-                let x = 0, z = 0;
-                for (let tries = 0; tries < 30; tries++) {
-                    const a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 30;
-                    x = Math.max(-A + 4, Math.min(A - 4, pp.x - O.x + Math.cos(a) * d)); z = Math.max(-A + 4, Math.min(A - 4, pp.z - O.z + Math.sin(a) * d));
-                    if ((x - (pp.x - O.x)) ** 2 + (z - (pp.z - O.z)) ** 2 > 15 * 15) break;
-                }
-                const r = Math.random(), type = r < heavy ? 'heavy' : r < heavy + 0.36 ? 'drone' : 'runner';
-                const e = new c.api.Enemy(O.x + x, O.y, O.z + z, type, run.lvl);
+            const A = world.A, pp = player.mesh.position, px = pp.x - O.x, pz = pp.z - O.z, a0 = Math.random() * Math.PI * 2;
+            const units = run.plan[k].units, of = kind => units.filter(u => u.split(':')[0] === kind), aliens = AL.get(c.api), seen = {};
+            const at = (a, d) => [Math.max(-A + 4, Math.min(A - 4, px + Math.cos(a) * d)), Math.max(-A + 4, Math.min(A - 4, pz + Math.sin(a) * d))];
+            const born = e => {
                 e.noReward = true; alienize(e);
                 if (depth > 20) { e.hp = e.maxHp = Math.round(e.maxHp * (1 + 0.06 * (depth - 20))); }   // endless: past depth 20 they keep getting sturdier
                 if (e.alertNow) e.alertNow(pp);
                 run.alive.push(e);
-                const q = e.aimPoint(); c.api.spawnFlash(q, world.glow.getHex(), 2.4, 0.3); c.api.spawnShockwave(q.setY(e.mesh.position.y + 0.1), world.glow.getHex(), 5);
+            };
+            const flare = (e, size) => { const q = e.aimPoint(); c.api.spawnFlash(q, world.glow.getHex(), 2.4 * size, 0.3); c.api.spawnShockwave(q.setY(O.y + 0.1), world.glow.getHex(), 5 * size); };
+            for (const u of units) {
+                const [kind, style] = u.split(':'), i = seen[kind] = (seen[kind] || 0) + 1, n = of(kind).length, mid = i - (n + 1) / 2;
+                if (kind === 'runner') { const [x, z] = at(a0 + mid * 0.11, 24 + (i % 2) * 2.5); const e = new c.api.Enemy(O.x + x, O.y, O.z + z, 'runner', run.lvl); born(e); flare(e, 1); }
+                else if (kind === 'heavy') { const [x, z] = at(a0 + mid * 0.24, 31); const e = new c.api.Enemy(O.x + x, O.y, O.z + z, 'heavy', run.lvl); born(e); flare(e, 1.3); }
+                else if (kind === 'drone') { const [x, z] = at(a0 + Math.PI + mid * 0.2, 21 + (i % 2) * 3); const e = new c.api.Enemy(O.x + x, O.y, O.z + z, 'drone', run.lvl); born(e); flare(e, 1); }
+                else if (kind === 'shell') { const [x, z] = at(a0 + Math.PI / n + (i - 1) * Math.PI * 2 / n, 19); const e = new aliens.Shell(O.x + x, O.y, O.z + z, run.lvl); born(e); flare(e, 1.2); }
+                else if (kind === 'swarm') {
+                    const [x, z] = at(a0 + (i % 2 ? 1 : -1) * (Math.PI / 2 + Math.floor((i - 1) / 2) * 0.5), 17);
+                    const pack = aliens.swarm(O.x + x, O.y, O.z + z, run.lvl, AL.packSize(depth)); pack.forEach(born); flare(pack[0], 1.2);
+                } else {
+                    const [x, z] = at(a0 + mid * 0.5, 26); const e = new aliens.Maverick(O.x + x, O.y, O.z + z, run.lvl, style); born(e); flare(e, 2.2);
+                    setTimeout(() => { if (on && run && !e.isDead) c.toast(aliens.eliteText(e.name)); }, 1300 + i * 900);
+                    try { AudioSys.playBossRoar(); } catch (err) { }
+                }
             }
             c.toast(S('wave', k + 1, run.waves)); try { AudioSys.playBossLeap(); AudioSys.playAlert(10, 0); } catch (err) { }
         }
@@ -254,6 +272,7 @@ window.AxonExplore = (function () {
             const prize = 20 + 2 * Math.min(depth, 10);                                  // small on purpose: 22 … 40 CR, however deep you go
             if (window.AxonShop) window.AxonShop.add(prize, player.mesh.position.clone().setY(player.mesh.position.y + 3.2), S('reward'));
             c.toast(S('cleared')); try { AudioSys.playPurge(); } catch (err) { }
+            if (window.AxonWinner) window.AxonWinner.show({ sub: `${S('cleared')} · ${S('depth')} ${depth}`, music: 14 });   // the last wave is down: WINNER, and the victory march
             depth++; c.store.set('exploreDepth', String(depth)); c.store.set('exploreBest', String(Math.max(depth - 1, +c.store.get('exploreBest', '0') || 0))); paintHqSign();
             buildPortals();
         }
@@ -315,6 +334,7 @@ window.AxonExplore = (function () {
         // mode: 'in' (from the HQ gate) · 'deeper' (a new world) · 'home' (back to the HQ gate)
         function travel(mode) {
             if (busy) return; busy = true;
+            if (window.AxonWinner) window.AxonWinner.stop();
             c.setState('travel');
             fade.dir = lang() === 'ar' ? 'rtl' : 'ltr';
             fade.innerHTML = `<div><small>MTZ // RIFT</small><b>${mode === 'home' ? S('home') : S('depth') + ' ' + depth}</b><span>${mode === 'home' ? S('returning') : S('opening')}</span></div>`;
@@ -391,3 +411,4 @@ window.AxonExplore = (function () {
 
     return { create, S };
 })();
+

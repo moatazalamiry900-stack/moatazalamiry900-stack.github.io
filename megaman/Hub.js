@@ -134,8 +134,23 @@ window.AxonHub = (function () {
         talk: P => { P.armR.rotation.x = -0.55; P.armR.rotation.y = -0.45; P.armR.rotation.z = 0; P.elbowR.rotation.x = -1.35; P.armL.rotation.x = 0.08; },
         pad: P => { P.armL.rotation.x = -0.4; P.armL.rotation.y = 0.55; P.armL.rotation.z = 0; P.elbowL.rotation.x = -1.7; P.headGroup.rotation.x += 0.22; },
         crossed: P => { P.armL.rotation.x = -0.45; P.armR.rotation.x = -0.45; P.armL.rotation.y = 0.9; P.armR.rotation.y = -0.9; P.armL.rotation.z = 0; P.armR.rotation.z = 0; P.elbowL.rotation.x = -1.9; P.elbowR.rotation.x = -1.9; },
-        guard: P => { P.armL.rotation.x = 0.05; P.armR.rotation.x = 0.05; }
+        guard: P => { P.armL.rotation.x = 0.05; P.armR.rotation.x = 0.05; },
+        commander: P => { POSES.crossed(P); if (P.backSaber) P.backSaber.visible = false; }   // arms crossed, no saber: his greatcoat hangs over the back (council.js)
     };
+
+    // ---------- TRAINING WING (training.js): its text, room, corridor, doorway in the hangar bay and instructor join the tables above ----------
+    const TRN = window.AxonTraining || null;
+    if (TRN) {
+        Object.keys(L).forEach(l => { const t = TRN.TEXT[l] || TRN.TEXT.en; Object.assign(L[l], t); L[l].say = L[l].say.concat([t.sayLine]); });
+        ZONES.push(TRN.ZONE); HALLS.push(TRN.HALL); ZONES[1].gaps.e = [TRN.BAY_GAP]; CREW.push(TRN.INSTRUCTOR);
+    }
+    // ---------- WAR ROOM on the second floor (council.js): its text, room, staircase and the doorway in the hangar bay ----------
+    const CNL = window.AxonCouncil || null;
+    if (CNL) {
+        Object.keys(L).forEach(l => Object.assign(L[l], CNL.hubText(l)));
+        ZONES.push(CNL.ZONE); HALLS.push(CNL.HALL); ZONES[1].gaps.w = [CNL.BAY_GAP];
+    }
+    const COARSE = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
     // ---------- merge with mirrored parts kept front-facing ----------
     function merge(THREE, list) {
@@ -172,7 +187,7 @@ window.AxonHub = (function () {
         const P = { mesh: new THREE.Group(), velocity: new THREE.Vector3(), isGrounded: true, isDashing: false, localF: 0, localS: 0, slashTimer: 0, hurtTimer: 0,
             charge: 0, aimTimer: 0, recoilTimer: 0, invincibleTimer: 0, dead: false, flipT: 0, rollT: 0, wallJumpT: 0, wallSlide: 0, skidT: 0, jumpCount: 0,
             lockedEnemy: null, lookTarget: null, headYaw: 0, headPitch: 0, aimPitch: 0, slashSide: 1, slashKind: 'h1', slashDur: 0.28 };
-        H.build(P, type);
+        H.build(P, type, 0.3);   // crew are seen from a few metres: a third of the hero's segments is plenty
         const p = PALETTES[pal], M = P.mats;
         M.pearl.color.setHex(p.armor); M.steel.color.setHex(p.under); M.trim.color.setHex(p.trim);
         M.glow.color.setHex(p.glow); M.glow.emissive.setHex(p.glow); M.accent.color.setHex(p.accent); M.accent.emissive.setHex(p.accent);
@@ -188,7 +203,7 @@ window.AxonHub = (function () {
             if (!map.has(o.material)) map.set(o.material, []); map.get(o.material).push({ geo: o.geometry, matrix: m });
         });
         const g = new THREE.Group(), hg = new THREE.Group();
-        const bake = (map, to) => map.forEach((list, mat) => { const mesh = new THREE.Mesh(merge(THREE, list), mat); mesh.castShadow = true; to.add(mesh); });
+        const bake = (map, to) => map.forEach((list, mat) => { const mesh = new THREE.Mesh(merge(THREE, list), mat); mesh.castShadow = !COARSE; to.add(mesh); });   // phones: no crew shadows (each one is drawn a second time)
         bake(body, g); bake(hd, hg);
         head.matrixWorld.decompose(hg.position, hg.quaternion, hg.scale); g.add(hg);
         g.scale.setScalar(scale);
@@ -268,8 +283,8 @@ window.AxonHub = (function () {
                 strip(0xbff4ff, x, H - 0.15, z, wl, 0.06, 1.6);
             }
         }
-        ZONES.forEach(room);
-        HALLS.forEach(hall);
+        ZONES.forEach(r => r.custom || room(r));
+        HALLS.forEach(hl => hl.custom || hall(hl));
 
         // ---------- COMMAND DECK (centre) ----------
         const HW = 22, HD = 20;
@@ -281,7 +296,7 @@ window.AxonHub = (function () {
         // ---------- HANGAR BAY (south, arrival) ----------
         block('door', 0, 5, 58.5, 14, 10, 1); block('wall', 0, 11, 58.5, 14, 2, 1);                              // sealed hangar door
         strip(0xffa826, 0, 10.1, 57.94, 14.4, 0.14, 0.06); strip(0xffa826, -7.15, 5, 57.94, 0.14, 10, 0.06); strip(0xffa826, 7.15, 5, 57.94, 0.14, 10, 0.06);
-        for (const [x, y, z] of [[-10, 1, 52], [-10, 3, 52], [-10, 1, 49.6], [10.5, 1, 40], [11, 1, 51], [-11, 1, 38.5]]) block('wall', x, y, z, 2.2, 2, 2.2, 0xffa826);   // cargo crates
+        for (const [x, y, z] of [[-10, 1, 52], [-10, 3, 52], [-10, 1, 49.6], [10.5, 1, 39], [11, 1, 53.4], [-11, 1, 38.5]]) block('wall', x, y, z, 2.2, 2, 2.2, 0xffa826);   // cargo crates
 
         // ---------- OPERATIONS (west) ----------
         for (const z of [-7, 0, 7]) { block('wall', -62.3, 0.55, z, 1.6, 1.1, 4.2); strip(0x8f6bff, -61.46, 1.12, z, 0.06, 0.06, 4.2); frame(-63.95, 3.3, z, 3.8, 2.1, 0x8f6bff, 'x'); }
@@ -292,6 +307,8 @@ window.AxonHub = (function () {
         for (const z of [-10, -6.5, -3]) { block('wall', 61.8, 0.2, z, 2.4, 0.4, 2.4); block('wall', 61.8, 4.3, z, 2.4, 0.4, 2.4); }   // pod bases / caps
         for (const x of [41, 46, 51]) { block('wall', x, 1.8, -13.1, 3.6, 3.6, 1.8, 0x5cf0a0); strip(0x5cf0a0, x, 2.6, -12.18, 3, 0.06, 0.06); strip(0x5cf0a0, x, 1.2, -12.18, 3, 0.06, 0.06); }   // weapon racks
 
+        if (TRN) TRN.decor({ block, strip, frame });
+        if (CNL) CNL.decor({ block, strip, frame });
         batcher.finish({ floor: c.blockMat('floor'), wall: c.blockMat('wall'), door: c.blockMat('door') });
 
         // ---------- MISSION CONTROL screen ----------
@@ -442,7 +459,7 @@ window.AxonHub = (function () {
             sg.tex.needsUpdate = true;
         }
         const gates = HALLS.map(hl => {
-            const g = add(new THREE.Group(), hl.x, 0, hl.z); if (!hl.alongZ) g.rotation.y = Math.PI / 2;   // local x = across the doorway
+            const gx = hl.gx !== undefined ? hl.gx : hl.x, g = add(new THREE.Group(), gx, hl.y || 0, hl.z); if (!hl.alongZ) g.rotation.y = Math.PI / 2;   // local x = across the doorway
             const edgeM = glow(0x39d7ff), lampM = new THREE.MeshBasicMaterial({ color: 0xffa826 });
             const panels = [-1, 1].map(s => {
                 const p = new THREE.Group(); p.position.x = s * 4; g.add(p);
@@ -461,7 +478,7 @@ window.AxonHub = (function () {
                 const pl = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.12), new THREE.MeshBasicMaterial({ map: tex }));
                 pl.position.set(0, 8.55, s * 0.62); if (s < 0) pl.rotation.y = Math.PI; g.add(pl);
             });
-            return { x: hl.x, z: hl.z, alongZ: hl.alongZ, panels, lamp, edgeM, open: 0, near: false };
+            return { x: gx, z: hl.z, alongZ: hl.alongZ, panels, lamp, edgeM, open: 0, near: false };
         });
 
         // ---------- exit sign over the hangar door (it leads out to the OUTER ZONE) ----------
@@ -471,8 +488,8 @@ window.AxonHub = (function () {
         const exitSign = add(new THREE.Mesh(new THREE.PlaneGeometry(9, 1.7), new THREE.MeshBasicMaterial({ map: exitTex })), 0, 11, 57.93); exitSign.rotation.y = Math.PI;
 
         // ---------- interaction spots: mission console, armory pods, armor studio ----------
-        const SPOTS = [{ id: 'exit', x: 0, z: 55.2, r: 2.6 }, { id: 'explore', x: -50, z: 8.6, r: 2.2 }, { id: 'missions', x: 0, z: -14.2, r: 3.3 }, { id: 'armory', x: 57.5, z: -6.5, r: 2.8 }, { id: 'style', x: 61.4, z: 7, r: 1.45 }, { id: 'forge', x: 46.25, z: 7.4, r: 2.0 }, { id: 'look', x: 49, z: -8.6, r: 1.35 }];
-        const zoneM = glow(0xffa826, 0.75), spotRings = SPOTS.map(s => flat(new THREE.RingGeometry(1.35, 1.55, 48), zoneM, s.x, s.z, 0.03));
+        const SPOTS = [{ id: 'exit', x: 0, z: 55.2, r: 2.6 }, { id: 'explore', x: -50, z: 8.6, r: 2.2 }, { id: 'missions', x: 0, z: -14.2, r: 3.3 }, { id: 'armory', x: 57.5, z: -6.5, r: 2.8 }, { id: 'style', x: 61.4, z: 7, r: 1.45 }, { id: 'forge', x: 46.25, z: 7.4, r: 2.0 }, { id: 'look', x: 49, z: -8.6, r: 1.35 }].concat(TRN ? [TRN.SPOT] : [], CNL ? [CNL.SPOT] : []);
+        const zoneM = glow(0xffa826, 0.75), spotRings = SPOTS.map(s => flat(new THREE.RingGeometry(1.35, 1.55, 48), zoneM, s.x, s.z, (s.y || 0) + 0.03));
         const marker = add(new THREE.Mesh(new THREE.OctahedronGeometry(0.38, 0), glow(0xffa826)), 0, 3.6, -14.2); marker.scale.y = 1.5;
 
         // ---------- operatives ----------
@@ -573,7 +590,7 @@ window.AxonHub = (function () {
         const el = (id, tag = 'div', cls = '') => { const e = document.createElement(tag); e.id = id; if (cls) e.className = cls; stage.appendChild(e); return e; };
         const tag = el('hub-tag'), act = el('hub-act', 'button'), say = el('hub-say'), fade = el('hub-fade'), panel = el('hub-panel', 'div', 'ui-layer');
         act.type = 'button';
-        const ACT_ICON = { look: '<circle cx="12" cy="7.5" r="4"/><path d="M4.5 21c1.2-4.2 4-6.3 7.5-6.3s6.3 2.1 7.5 6.3"/><path d="M18 2.5l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/>', forge: '<path d="M4 14h12l3-3H8z"/><path d="M9 14v3l-3 3h12l-3-3v-3"/><path d="M14 3l5 5-3 1-3-3z"/>', explore: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16M12 8a4 4 0 0 1 0 8"/>', exit: '<path d="M14 4h5v16h-5"/><path d="M3 12h11M7 8l-4 4 4 4"/>', missions: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4M7 8h4M7 11h7"/>', armory: '<path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>', style: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.8 0-1.1-.9-1.4-.9-2.4 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>' };
+        const ACT_ICON = { train: TRN ? TRN.ICON : '', chief: CNL ? CNL.ICON : '', look: '<circle cx="12" cy="7.5" r="4"/><path d="M4.5 21c1.2-4.2 4-6.3 7.5-6.3s6.3 2.1 7.5 6.3"/><path d="M18 2.5l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/>', forge: '<path d="M4 14h12l3-3H8z"/><path d="M9 14v3l-3 3h12l-3-3v-3"/><path d="M14 3l5 5-3 1-3-3z"/>', explore: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16M12 8a4 4 0 0 1 0 8"/>', exit: '<path d="M14 4h5v16h-5"/><path d="M3 12h11M7 8l-4 4 4 4"/>', missions: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4M7 8h4M7 11h7"/>', armory: '<path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>', style: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.8 0-1.1-.9-1.4-.9-2.4 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>' };
         let spot = null, sel = 0, on = false, t = 0, sayT = 0, busy = false, here = ZONES[0];
         const zoneAt = (x, z) => ZONES.find(r => Math.abs(x - r.x) <= r.hw && Math.abs(z - r.z) <= r.hd) || null;
         const labels = () => {
@@ -583,7 +600,7 @@ window.AxonHub = (function () {
         };
         const zoneLabel = () => { const sl = document.getElementById('stage-label'); if (sl && on) sl.textContent = S(here.key); };
         labels();
-        if (window.AxonI18n) window.AxonI18n.onChange(() => { labels(); zoneLabel(); drawScreen(); signs.forEach(paintSign); if (panel.classList.contains('show')) renderPanel(); });
+        if (window.AxonI18n) window.AxonI18n.onChange(() => { labels(); zoneLabel(); drawScreen(); signs.forEach(paintSign); if (panel.classList.contains('show')) renderPanel(); if (trn) trn.relang(); if (gd) gd.relang(); if (cnl) cnl.relang(); });
 
         function renderPanel() {
             const cur = current(), done = Math.min(progress - 1, MISSIONS.length);
@@ -620,13 +637,24 @@ window.AxonHub = (function () {
             if (tl) { sel = +tl.dataset.m; if (isOpen(MISSIONS[sel])) AudioSys.playUi('select'); else AudioSys.playDeny(); renderPanel(); const f = panel.querySelector(`[data-m="${sel}"]`); f && f.focus({ preventScroll: true }); return; }
             if (e.target.closest('[data-go]') && isOpen(MISSIONS[sel])) deploy(sel);
         });
-        act.addEventListener('click', () => { AudioSys.init(); if (!spot) return; if (spot.id === 'exit') { c.onExit && c.onExit(); } else if (spot.id === 'explore') { c.onExplore && c.onExplore(); } else if (spot.id === 'forge') { c.onForge && c.onForge(); } else if (spot.id === 'look') { c.onLook && c.onLook(); } else if (spot.id === 'missions') openPanel(); else if (spot.id === 'style') studio.open(); else { AudioSys.init(); window.AxonShop && window.AxonShop.show(); } });
+        act.addEventListener('click', () => { AudioSys.init(); if (!spot) return; if (spot.id === 'exit') { c.onExit && c.onExit(); } else if (spot.id === 'explore') { c.onExplore && c.onExplore(); } else if (spot.id === 'forge') { c.onForge && c.onForge(); } else if (spot.id === 'look') { c.onLook && c.onLook(); } else if (spot.id === 'missions') openPanel(); else if (spot.id === 'train') trn.open(); else if (spot.id === 'chief') cnl.open(); else if (spot.id === 'style') studio.open(); else { AudioSys.init(); window.AxonShop && window.AxonShop.show(); } });
         window.addEventListener('keydown', e => {
             if (panel.classList.contains('show') && e.code === 'Escape') { e.stopImmediatePropagation(); closePanel(); return; }
+            if (trn && trn.isOpen() && e.code === 'Escape') { e.stopImmediatePropagation(); trn.close(); return; }
             if (studio.isOpen) { studio.key(e); return; }
             const ae = document.activeElement, typing = ae && /INPUT|TEXTAREA|BUTTON|SELECT/.test(ae.tagName) && ae.offsetParent !== null;
             if ((e.code === 'KeyE' || (e.code === 'Enter' && !typing)) && spot && c.getState() === 'hub') { e.preventDefault(); act.click(); }
         }, true);
+
+        // ---------- TRAINING WING: trainees, targets and the skills panel live in training.js ----------
+        const trn = TRN ? TRN.build({ THREE, c, O, V, add, root, glow, flat, canvasTex, FONT, S, PALETTES, stage, AudioSys, el,
+            speak: html => { say.innerHTML = html; say.classList.add('show'); sayT = 3.2; } }) : null;
+
+        const gd = window.AxonGuide ? window.AxonGuide.build({ THREE, c, O, add, glow, stage, AudioSys, el, FONT, camera: () => cameraSystem.camera }) : null;   // KENDEL, the guide (guide.js)
+
+        // WAR ROOM (council.js): the map table, the five leaders, the door guards and the commander's briefing
+        const cnl = CNL ? CNL.build({ THREE, c, O, V, add, root, glow, flat, canvasTex, FONT, PALETTES, bakeCrew, stage, AudioSys, el,
+            speak: html => { say.innerHTML = html; say.classList.add('show'); sayT = 3.2; } }) : null;
 
         // ---------- ARMOR STUDIO: a Mega-Man-style upgrade capsule against the east wall of the ARMORY WING.
         // Step in → the camera swings to face you, the colour schemes appear, each one is tried on live,
@@ -794,7 +822,7 @@ window.AxonHub = (function () {
         }
         // stepping out through the hangar door: the HQ disappears, the facility stays hidden
         function suspend() { on = false; root.visible = false; stage.classList.remove('in-hub'); act.classList.remove('show'); say.classList.remove('show'); spot = null; }
-        const setZone = z => { here = z; labels(); zoneLabel(); };
+        const setZone = z => { here = z; labels(); zoneLabel(); stage.classList.toggle('in-train', z.id === 'trn'); };
         function enter() {
             setZone(ZONES[1]);                                             // arrive in the hangar bay
             show(true);
@@ -803,7 +831,7 @@ window.AxonHub = (function () {
             c.roamLight.position.set(O.x + here.x, O.y + 9, O.z + here.z); c.roamLight.color.setHex(here.light); c.roamLight.intensity = baseLight; c.roamLight.userData.cur = null;
             crew.forEach(m => { m.said = false; });
             gates.forEach(d => { d.open = 0; d.near = false; });
-            c.setState('hub');
+            c.setState('hub'); if (gd) gd.enter();
             const U = window.AxonUI; if (U && U.tip) { U.tip('hq_terminal'); U.tip('hq_armory'); U.tip('saves'); }
         }
         // main-menu backdrop: the hero stands on the command deck facing the camera, key light in front of him
@@ -895,15 +923,18 @@ window.AxonHub = (function () {
                 mg.beginPath(); mg.arc(X(sp.x), Y(sp.z), Math.max(3, sp.r * s), 0, Math.PI * 2); mg.fill(); mg.stroke();
             });
             mg.font = `600 10px ${FONT}`;
+            const lab = [];
             SPOTS.forEach(sp => {
+                if (spot !== sp && lab.some(q => Math.abs(q[0] - X(sp.x)) < 44 && Math.abs(q[1] - Y(sp.z)) < 13)) return; lab.push([X(sp.x), Y(sp.z)]);   // no two names on top of each other
                 mg.fillStyle = spot === sp ? '#ffa826' : '#e6eef6';
-                const textKey = { missions: 'map_term', armory: 'map_arm', style: 'map_sty', exit: 'map_exit', explore: 'map_exp', forge: 'map_forge', look: 'map_look' }[sp.id];
+                const textKey = { missions: 'map_term', armory: 'map_arm', style: 'map_sty', exit: 'map_exit', explore: 'map_exp', forge: 'map_forge', look: 'map_look', train: 'map_trn', chief: 'map_chief' }[sp.id];
                 mg.fillText(S(textKey), X(sp.x), Y(sp.z) + Math.max(3, sp.r * s) + 7);
             });
             mg.shadowBlur = 0;
             // crew
             mg.fillStyle = '#b48cff';
             crew.forEach(cr => { mg.beginPath(); mg.arc(X(cr.x), Y(cr.z), 2.2, 0, Math.PI * 2); mg.fill(); });
+            if (gd) gd.dot(mg, X, Y, lx, lz);
             // player arrow (always centred)
             const ry = player.mesh.rotation.y;
             mg.save(); mg.translate(cx, cy);
@@ -938,13 +969,13 @@ window.AxonHub = (function () {
             if (zn && zn !== here) { setZone(zn); if (c.getState() === 'hub') AudioSys.playZone(); }
             if (c.getState() !== 'title') {                                // the key light drifts into the wing you walk into
                 const k = Math.min(1, dt * 2);
-                c.roamLight.position.lerp(_lp.set(O.x + here.x, O.y + 9, O.z + here.z), k);
+                c.roamLight.position.lerp(_lp.set(O.x + here.x, O.y + 9 + (here.y || 0), O.z + here.z), k);
                 c.roamLight.color.lerp(_lc.setHex(here.light), k);
             }
             // blast gates: open when you are near, close behind you
             for (const d of gates) {
-                const near = (lx - d.x) ** 2 + (lz - d.z) ** 2 < 81;
-                if (near && !d.near && c.getState() === 'hub') AudioSys.playSlideDoor();
+                const pd = (lx - d.x) ** 2 + (lz - d.z) ** 2, near = pd < 81 || !!(gd && gd.at(d.x, d.z)) || !!(window.AxonCoop && window.AxonCoop.nearAny(O.x + d.x, O.z + d.z, 81));   // you, KENDEL or a teammate
+                if (near !== !!d.near && pd < 1600 && c.getState() === 'hub') AudioSys.playSlideDoor();
                 d.near = near;
                 d.open += ((near ? 1 : 0) - d.open) * Math.min(1, dt * 7);
                 const k = Math.max(0.06, 1 - d.open * 0.94);
@@ -964,7 +995,10 @@ window.AxonHub = (function () {
             // operatives: breathe, turn their heads to you, say a line when you walk up
             for (const m of crew) {
                 const dx = lx - m.x, dz = lz - m.z, d2 = dx * dx + dz * dz;
-                m.g.visible = d2 < 48 * 48; if (!m.g.visible) continue;          // other wings: not drawn
+                // other wings: not drawn. The rooms are closed boxes, so someone in another room is behind a wall unless you
+                // are near enough to look through an open gate (26 m) — phones were drawing 3–4 hidden people (60 000 triangles)
+                if (m.zone === undefined) m.zone = zoneAt(m.x, m.z);
+                m.g.visible = d2 < 48 * 48 && (d2 < 26 * 26 || !zn || !m.zone || m.zone === zn); if (!m.g.visible) continue;
                 m.g.scale.y = m.scale * (1 + Math.sin(time * 1.9 + m.ph) * 0.005);
                 let want = 0;
                 if (d2 < 90) { let a = Math.atan2(dx, dz) - m.face; a = Math.atan2(Math.sin(a), Math.cos(a)); if (Math.abs(a) < 1.9) want = Math.max(-1, Math.min(1, a)); }
@@ -973,6 +1007,9 @@ window.AxonHub = (function () {
                 if (d2 < 12 && !m.said) { m.said = true; AudioSys.playComm(); say.innerHTML = `<b>${m.name}</b>${S('say')[m.line]}`; say.classList.add('show'); sayT = 3.2; }
             }
             if (sayT > 0 && (sayT -= dt) <= 0) say.classList.remove('show');
+            if (trn) trn.update(dt, time, lx, lz);
+            if (gd) gd.update(dt, time, lx, lz);
+            if (cnl) cnl.update(dt, time, lx, lz, gd);
 
             drawHubMap(c.player, dt);
         }
@@ -984,7 +1021,7 @@ window.AxonHub = (function () {
             get camShift() { return studio.shift; },
             get on() { return on; },
             // weapons stay holstered inside HQ
-            holster(Input) { for (const a of ['Attack', 'Shoot', 'Lock']) { Input.pressed[a] = false; Input.held[a] = false; } },
+            holster(Input) { for (const a of ['Attack', 'Shoot', 'Lock']) { if (a === 'Attack' && here.id === 'trn') continue; Input.pressed[a] = false; Input.held[a] = false; } },   // the saber is allowed in the training wing
             cleared(i) { if (i + 1 >= progress) { progress = i + 2; c.store.set('progress', String(progress)); drawScreen(); placeHi(); } }
         };
     }
