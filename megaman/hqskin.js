@@ -73,8 +73,34 @@
       #stage #hub-panel.hq-narrow .hm-tile .bossimg{inset-inline-start:auto;inset-inline-end:5px;top:5px;bottom:5px;width:46px;max-width:46px;height:calc(100% - 10px);opacity:.9}
       #stage #hub-panel.hq-narrow .hm-tile.hasboss .pt{opacity:1;border-color:#ff2a45}
       #stage #hub-panel.hq-narrow .hm-tile .n,#stage #hub-panel.hq-narrow .hm-tile .c,#stage #hub-panel.hq-narrow .hm-tile .s{position:relative;z-index:2;text-shadow:0 1px 3px #000}
-      #stage:not(.is-portrait) #hub-panel .hm-det .hm-go{position:sticky;bottom:0;z-index:3;box-shadow:0 -10px 12px 4px rgba(9,20,36,.96)}
-      #stage:not(.is-portrait) #hub-panel .hm-det{padding-bottom:10px}
+      /* the DEPLOY button is always whole and always on screen: the detail panel is a column whose text gives way, never the button */
+      #stage #hub-panel .hm-det{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+      #stage #hub-panel .hm-det > *{flex:0 0 auto}
+      #stage #hub-panel .hm-det p{flex:1 1 auto;min-height:0;overflow:hidden}
+      #stage #hub-panel .hm-det .hm-go{position:relative;margin-top:auto;z-index:3}
+      @media (max-height:460px){
+        #stage:not(.is-portrait) #hub-panel .hm-det{gap:5px;padding:8px 10px}
+        #stage:not(.is-portrait) #hub-panel .hm-det .k{display:none}
+        #stage:not(.is-portrait) #hub-panel .hm-det .art,#stage:not(.is-portrait) #hub-panel .hm-det .art.boss{height:46px;min-height:46px}
+        #stage:not(.is-portrait) #hub-panel .hm-det .art.boss img{height:46px;width:46px}
+        #stage:not(.is-portrait) #hub-panel .hm-det .art.boss::before{width:42px;height:42px;margin:-21px 0 0 -21px}
+        #stage:not(.is-portrait) #hub-panel .hm-det h3{font-size:17px}
+        #stage:not(.is-portrait) #hub-panel .hm-det .hm-go{padding:11px 14px}
+      }
+      /* portrait: the missions scroll in their own box (four to a row); the detail panel with its button stays under them */
+      #stage.is-portrait #hub-panel .hm-body{display:flex;flex-direction:column;overflow:hidden;gap:10px}
+      #stage.is-portrait #hub-panel .hm-grid{grid-template-columns:repeat(4,1fr);grid-auto-rows:max-content;gap:6px;overflow:auto;flex:1 1 auto;min-height:112px}
+      #stage.is-portrait #hub-panel .hm-tile{min-height:108px;height:auto;padding:50px 5px 6px 8px;overflow:visible}
+      #stage.is-portrait #hub-panel .hm-tile > svg{display:none}
+      #stage.is-portrait #hub-panel .hm-tile .n{font-size:17px} #stage.is-portrait #hub-panel .hm-tile .c{font-size:8.5px;letter-spacing:.02em}
+      #stage.is-portrait #hub-panel .hm-det{flex:0 0 auto;gap:7px;padding:10px 12px}
+      #stage.is-portrait #hub-panel .hm-det .art,#stage.is-portrait #hub-panel .hm-det .art.boss{display:grid;height:58px;min-height:58px}
+      #stage.is-portrait #hub-panel .hm-det .art.boss img{height:58px;width:58px}
+      #stage.is-portrait #hub-panel .hm-det .art.boss::before{width:54px;height:54px;margin:-27px 0 0 -27px}
+      #stage.is-portrait #hub-panel .hm-det p{flex:0 0 auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+      /* mission 01 has its guardian's picture: no "unknown" silhouette and no question mark behind it */
+      #stage #hub-panel .hm-tile.hasboss .pt > *{display:none!important}
+      #stage #hub-panel .hm-tile.hasboss .pt::after{display:none!important}
       @keyframes hqTile{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
       @keyframes hqBr{50%{inset:6px;opacity:.55}}
       @keyframes hqSpin{to{transform:rotate(360deg)}}

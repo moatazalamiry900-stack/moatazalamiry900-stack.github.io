@@ -205,6 +205,9 @@ window.AxonLevel = (function () {
                 this.mats.forEach(m => { m.userData.e = m.emissive.clone(); m.userData.ei = m.emissiveIntensity; });
                 if (window.AxonFoeLook) window.AxonFoeLook.dress(this, type, { add, C, B, dark, silver, red, hazard });   // the finished look (foelook.js)
                 window.AxonPerf.mergeStatic(this.core, m => m === this.ring || m === this.eye);
+                // the whole machine is one skinned mesh per material (the same thing the hero's body does): every joint still moves as before,
+                // but a unit is ~6 draw calls instead of ~13. Its bounds are set by hand, so one behind the camera is still skipped.
+                try { const rig = window.AxonPerf.skinRig(this.mesh, o => !o.isMesh || o === this.ring || o === this.eye, () => true); if (rig) { const R = type === 'heavy' ? 5.2 : 3.8; rig.meshes.forEach(m => { m.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, type === 'drone' ? 0 : R * 0.45, 0), R); m.frustumCulled = true; }); } } catch (err) { }
                 this.mesh.traverse(c => { if (c.isMesh) { c.castShadow = !api.lowShadow; c.receiveShadow = true; } });   // phones: only the heroes and the boss cast sun shadows (half the shadow-pass draw calls)
                 this.mark = new THREE.Sprite(MARK.q); this.mark.scale.setScalar(0.95); this.mark.visible = false; this.mark.renderOrder = 5;
                 this.mark.position.y = type === 'drone' ? 1.5 : type === 'runner' ? 3.0 : 4.3; this.mesh.add(this.mark);
@@ -304,9 +307,9 @@ window.AxonLevel = (function () {
                     this.mesh.rotation.y += dy * Math.min(1, (alert ? 10 : 3) * dt);
                 }
                 // light separation so api.enemies don't stack into one blob
-                for (const o of api.enemies) {
-                    if (o === this || o.isDead) continue;
-                    const dx = P.x - o.mesh.position.x, dz = P.z - o.mesh.position.z;
+                for (let oi = 0, EN = api.enemies, on = EN.length; oi < on; oi++) {             // an indexed loop: this runs for every machine against every machine, every frame — no iterator objects for the collector
+                    const o = EN[oi]; if (o === this || o.isDead) continue;
+                    const dx = P.x - o.mesh.position.x, dz = P.z - o.mesh.position.z; if (dx > 6 || dx < -6 || dz > 6 || dz < -6) continue;
                     const d2 = dx * dx + dz * dz, min = this.body.r + o.body.r;
                     if (d2 > 0.0001 && d2 < min * min) { const d = Math.sqrt(d2); vx += dx / d * 4; vz += dz / d * 4; }
                 }
@@ -1020,7 +1023,11 @@ window.AxonLevel = (function () {
                 if (window.AxonPower) window.AxonPower.tick(api, player, layout, dt);                // power crystals (power.js)
                 if (window.AxonChase) window.AxonChase.tick(api, player, layout, dt);
                 if (window.AxonRiddle) window.AxonRiddle.tick(api, player, layout, dt);
-                if (window.AxonToys) window.AxonToys.tick(api, player, layout, dt);                  // bounce pads, volatile crystals, vortex pylons, chandeliers (toys.js)              // the eye doors (riddle.js)                // the surge run (chase.js)
+                if (window.AxonToys) window.AxonToys.tick(api, player, layout, dt);
+                if (window.AxonSquad) window.AxonSquad.tick(api, player, layout, dt);
+                if (window.AxonTurret) window.AxonTurret.tick(api, player, layout, dt);
+                if (window.AxonElite) window.AxonElite.tick(api, player, layout, dt);
+                if (window.AxonSlowmo) window.AxonSlowmo.tick(api, player, layout, dt);              // the slow moment (slowmo.js)                // shielded heavies, volatile runners, difficulty (elite.js)              // mounted guns (turret.js)                // flairs + the squad board (squad.js)                  // bounce pads, volatile crystals, vortex pylons, chandeliers (toys.js)              // the eye doors (riddle.js)                // the surge run (chase.js)
                 if (window.AxonComm) window.AxonComm.tick(api, player, layout, dt);              // Kendel on the radio (comm.js)                 // gravity for walkers, enemies keep apart
                 while (zi < Z.length - 1 && p.z < Z[zi].z1) zi++; while (zi > 0 && p.z > Z[zi].z0) zi--;
                 const st = Z[zi].stage; if (st) fogTo.copy(fogBase).lerp(fogC.setHex(THEME[(st - 1) % THEME.length][Z[zi].kind === 'gauntlet' ? 1 : 0]), 0.2); else fogTo.copy(fogBase);

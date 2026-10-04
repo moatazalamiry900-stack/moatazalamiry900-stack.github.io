@@ -183,6 +183,7 @@ window.AxonCoop = (function () {
             case 'fx': if (host()) N().relay(m, from); ghostShot(m); break;
             case 'hit': if (host()) remoteHit(m, from); break;
             case 'dmg': if (!C.player.dead) C.player.takeDamage(m.d); break;
+            case 'sc': if (host()) N().relay(m, from); if (window.AxonSquad) window.AxonSquad.remote(m, from); break;   // a teammate's numbers and flair (squad.js)
             case 'ty': if (host()) N().relay(m, from); if (window.AxonToys) window.AxonToys.remote(m); break;       // a teammate set a device off (toys.js)
             case 'pz': if (host()) N().relay(m, from); if (window.AxonRiddle) window.AxonRiddle.remote(m); break;   // a teammate settled an eye door (riddle.js)
             case 'S': if (guest() && where() === 'm') snapshot(m); break;
@@ -552,6 +553,7 @@ window.AxonCoop = (function () {
         heroes() { const out = []; if (C && on()) mates.forEach(m => { if (m.A && m.here) out.push(m.A.mesh.position); }); return out; },
         nearAny(x, z, r2) { if (!C || !on()) return false; let hit = false; mates.forEach(m => { if (!hit && m.A && m.here) { const q = m.A.mesh.position; hit = (q.x - x) ** 2 + (q.z - z) ** 2 < r2; } }); return hit; },
         get on() { return on(); },
+        mates() { const out = []; if (C && on()) mates.forEach((m, slot) => { if (m.A) out.push({ slot, p: m.A.mesh.position, here: !!m.here }); }); return out; },
         send(m) { if (!on()) return; if (host()) N().broadcast(Object.assign({ id: 0 }, m)); else N().send(m); },
         get guest() { return guest(); },
         // pause / shop / tips don't stop a shared world: it keeps running (the hero just stands still)

@@ -55,8 +55,9 @@ window.AxonRiddle = (function () {
         if (panel) return;
         const st = document.createElement('style');
         st.textContent = `
-          #rd-go{position:absolute;z-index:8;left:50%;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 74px);transform:translateX(-50%);display:none;align-items:center;gap:10px;padding:12px 22px;border:0;cursor:pointer;
+          #rd-go{position:absolute;z-index:8;left:29%;top:63%;transform:translate(-50%,-50%);white-space:nowrap;display:none;align-items:center;gap:10px;padding:12px 22px;border:0;cursor:pointer;
             font:800 15px/1 var(--font,system-ui);letter-spacing:.12em;color:#07090d;background:var(--rc,#b58cff);clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);box-shadow:0 0 24px var(--rc,#b58cff);animation:rdPulse 1s ease-in-out infinite;pointer-events:auto;touch-action:manipulation}
+          #stage.is-portrait #rd-go{left:50%;top:60%}
           #rd-go.on{display:flex} #rd-go kbd{font:800 12px/1 var(--font,system-ui);padding:3px 6px;background:rgba(0,0,0,.25);color:#fff;border-radius:3px}
           #rd-go[dir=rtl]{letter-spacing:0;font-size:17px}
           #stage.modal-on #rd-go,#stage.comm-on #rd-go,#stage.rd-on #rd-go{display:none!important}
@@ -163,7 +164,7 @@ window.AxonRiddle = (function () {
         if (!remote && coop() && window.AxonCoop.send) window.AxonCoop.send({ t: 'pz', i: d.ai, ok: ok ? 1 : 0 });
         if (d.kind2 === 'a' && ok) {                                             // the meteors: watch them through the eye
             if (cur === d) { d.phase = 'watch'; panel.classList.add('watch'); if (frozen && window.AxonUI) window.AxonUI.freeze(false); frozen = false; } else if (cur) hide();
-            shout('win', 'winS', '#ffc24a');
+            shout('win', 'winS', '#ffc24a'); if (window.AxonSquad) window.AxonSquad.earn('meteor');
             const list = alive(d), a = d.a; d.met = { t: 0, rocks: [] };
             const pts = list.map(e => e.mesh.position.clone()); while (pts.length < 7) pts.push(new THREE.Vector3((Math.random() - 0.5) * a.half * 1.5, a.h, a.cz + (Math.random() - 0.5) * a.half * 1.5));
             pts.forEach((to, k) => {
@@ -177,7 +178,7 @@ window.AxonRiddle = (function () {
         }
         if (cur === d) hide(); else if (cur && remote) { /* another door's panel stays */ }
         if (d.kind2 === 'a') { shout('lose', 'loseS', '#ff2a55'); sfx(a => { a.tone('sawtooth', 220, 110, 0.5, 0.14); a.tone('square', 440, 440, 0.12, 0.08, { delay: 0.2 }); }); }
-        else shout('open', 'openS', '#5cf0a0');
+        else { shout('open', 'openS', '#5cf0a0'); if (ok && window.AxonSquad) window.AxonSquad.earn('lock'); }
         openDoor(d);
     }
     function meteors(d, dt) {
@@ -187,7 +188,7 @@ window.AxonRiddle = (function () {
             const k = (M.t - r.at) / 0.55; if (k < 0) continue;
             r.m.visible = true; r.m.position.lerpVectors(r.from, r.to, Math.min(1, k)); r.m.lookAt(r.from); r.m.rotateX(Math.PI / 2);
             if (k >= 1) {
-                r.hit = true; API.scene.remove(r.m);
+                r.hit = true; API.scene.remove(r.m); r.m.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
                 const p = r.to.clone().setY(r.to.y + 0.3);
                 API.spawnFlash(p.clone().setY(p.y + 1), 0xffb060, 7, 0.25); API.spawnShockwave(p, 0xff7a2a, 9); API.spawnSparks(p.clone().setY(p.y + 0.8), 0xffc24a, 30, 18); API.spawnSparks(p, 0xff4a2a, 16, 10); API.shake(0.55);
                 sfx(a => { a.noise(0.5, 0.22, { type: 'lowpass', f0: 1100, f1: 70 }); a.tone('sine', 150, 36, 0.45, 0.2); });

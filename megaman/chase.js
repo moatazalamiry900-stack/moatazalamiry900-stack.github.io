@@ -151,7 +151,7 @@ window.AxonChase = (function () {
                     for (let k = 0; k < 6; k++) api.spawnSparks(_v.set((Math.random() - 0.5) * 12, C.h + 1 + Math.random() * 9, d.z - 1.2), k % 2 ? RED : 0xffc24a, 26, 20);
                     api.spawnFlash(_v.set(0, C.h + 5, d.z - 1.5), RED, 14, 0.35);
                     sfx(a => { a.noise(1.4, 0.3, { type: 'lowpass', f0: 1800, f1: 50 }); a.tone('sine', 120, 28, 1.2, 0.28); a.tone('triangle', 520, 1040, 0.25, 0.09, { delay: 0.7 }); a.tone('triangle', 1040, 1560, 0.4, 0.09, { delay: 0.9 }); });
-                    shout('out', 'outS', '#5cf0a0');
+                    shout('out', 'outS', '#5cf0a0'); if (window.AxonSquad) { window.AxonSquad.earn('run'); if (!C.hits) window.AxonSquad.earn('storm'); }
                     if (window.AxonPower && !C.hits) window.AxonPower.grant('aegis');                // untouched: a shield for the fight ahead
                     else if (window.AxonPower) window.AxonPower.grant('mend');
                 }
@@ -181,7 +181,7 @@ window.AxonChase = (function () {
                     const k = Math.max(0, (q.t - 0.75) / 0.2);
                     if (k > 0) q.m.position.y = C.h + 3.5 + 12 * (1 - Math.min(1, k) ** 2);
                     if (k >= 1) {
-                        q.st = 2; api.scene.remove(q.ring); api.shake(0.5);
+                        q.st = 2; api.scene.remove(q.ring); q.ring.geometry.dispose(); q.ring.material.dispose(); api.shake(0.5);
                         api.solids.push(new THREE.Box3(new THREE.Vector3(q.x - 0.85, C.h, q.z - 0.85), new THREE.Vector3(q.x + 0.85, C.h + 7, q.z + 0.85)));
                         api.spawnSparks(_v.set(q.x, C.h + 0.4, q.z), RED, 24, 13);
                         sfx(a => { a.noise(0.22, 0.2, { type: 'lowpass', f0: 700, f1: 90 }); a.tone('sine', 140, 50, 0.2, 0.16); });
@@ -191,7 +191,7 @@ window.AxonChase = (function () {
             }
         }
         // the lens: wide while it chases, back to normal after
-        if (cam && fov0) { const want = (C.st === 2 || C.st === 3) ? fov0 + 11 : fov0; if (Math.abs(cam.fov - want) > 0.05) { cam.fov += (want - cam.fov) * Math.min(1, dt * 3); cam.updateProjectionMatrix(); } }
+        if (cam && fov0) { const want = ((C.st === 2 || C.st === 3) ? fov0 + 11 : fov0) + (window.AxonFovAdd || 0); if (Math.abs(cam.fov - want) > 0.05) { cam.fov += (want - cam.fov) * Math.min(1, dt * (window.AxonFovAdd ? 9 : 3) / (window.AxonSlowK || 1)); cam.updateProjectionMatrix(); } }
     }
     return { build, tick, name: () => T[lang()].area, get state() { return C ? C.st : -1; }, get info() { return C; } };
 })();

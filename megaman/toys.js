@@ -50,19 +50,40 @@ window.AxonToys = (function () {
     // matrix, and everything far from the hero is switched off (hidden + lazy = no draw call, no matrix work)
     const tidy = (g, live = []) => { try { window.AxonPerf.mergeStatic(g, m => live.includes(m)); } catch (e) { } g.userData.lazy = true; g.traverse(o => { if (o !== g && !live.includes(o) && !o.isSprite) { o.updateMatrix(); o.matrixAutoUpdate = false; } }); return g; };
     const SEE = 120; let cullT = 0;
+    // taken out of the level for good: its own geometry and materials leave the GPU too (the gold / dark ones and the icons are shared)
+    const scrap = o => { if (!o) return; if (o.parent) o.parent.remove(o); o.traverse(c => { if (c.isSprite) { c.material.dispose(); return; } if (c.geometry) c.geometry.dispose(); if (c.material && c.material !== gold && c.material !== dark) c.material.dispose(); }); };
     const hint = k => { if (told[k] || !API) return; told[k] = 1; API.toast(T[lang()][k]); };
 
     // ---------- BOUNCE PADS (level.js calls this where a spike bed used to be) ----------
+    // The rigid parts of every pad and every volatile crystal are INSTANCES: all the pads of the level are three draw calls
+    // (frames, corner posts, rings), all the crystals two (gems, cradles) — however many of them are on screen.
+    const padSpec = [], barSpec = []; let inst = null;
     function pad(api, x, top, z, w, d) {
-        const g = new THREE.Group(); g.position.set(x, top, z);
-        const frame = new THREE.Mesh(new THREE.BoxGeometry(w, 0.16, d), dark); frame.position.y = 0.08; g.add(frame);
-        const skin = new THREE.Mesh(new THREE.BoxGeometry(w - 0.5, 0.1, d - 0.5), new THREE.MeshStandardMaterial({ color: 0x1a6a4a, emissive: 0x5cf0a0, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.2 })); skin.position.y = 0.2; g.add(skin);
-        const rm = glow(0xcffff0, 0.9);
-        for (const k of [0.32, 0.62]) { const r = new THREE.Mesh(new THREE.RingGeometry(Math.min(w, d) * k * 0.5 - 0.06, Math.min(w, d) * k * 0.5, 28).rotateX(-Math.PI / 2), rm); r.position.y = 0.27; g.add(r); }
-        for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.3, 6), gold); c.position.set(sx * (w / 2 - 0.18), 0.15, sz * (d / 2 - 0.18)); g.add(c); }
-        tidy(g, [skin]); g.updateMatrix(); g.matrixAutoUpdate = false; api.scene.add(g);
-        pads.push({ g, skin, x, z, top, w, d, t: 9 });
+        const skin = new THREE.Mesh(new THREE.BoxGeometry(w - 0.5, 0.1, d - 0.5), new THREE.MeshStandardMaterial({ color: 0x1a6a4a, emissive: 0x5cf0a0, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.2 }));
+        skin.position.set(x, top + 0.2, z); skin.userData.lazy = true; api.scene.add(skin);
+        padSpec.push([x, top, z, w, d]); pads.push({ g: skin, skin, x, z, top, w, d, t: 9 });
     }
+    function instances(api) {
+        if (inst) { inst.forEach(m => { api.scene.remove(m); m.geometry.dispose(); }); }
+        const M = new THREE.Matrix4(), q = new THREE.Quaternion(), S = new THREE.Vector3(), V = new THREE.Vector3();
+        const IM = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); m.count = n; m.frustumCulled = false; m.matrixAutoUpdate = false; api.scene.add(m); return m; };
+        const frames = IM(new THREE.BoxGeometry(1, 0.16, 1), dark, padSpec.length), posts = IM(new THREE.CylinderGeometry(0.16, 0.2, 0.3, 6), gold, padSpec.length * 4), rings = IM(new THREE.RingGeometry(0.88, 1, 18).rotateX(-Math.PI / 2), glow(0xcffff0, 0.9), padSpec.length * 2);
+        padSpec.forEach(([x, top, z, w, d], k) => {
+            frames.setMatrixAt(k, M.compose(V.set(x, top + 0.08, z), q, S.set(w, 1, d)));
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz], c) => posts.setMatrixAt(k * 4 + c, M.compose(V.set(x + sx * (w / 2 - 0.18), top + 0.15, z + sz * (d / 2 - 0.18)), q, S.set(1, 1, 1))));
+            [0.32, 0.62].forEach((f, c) => { const r = Math.min(w, d) * f * 0.5; rings.setMatrixAt(k * 2 + c, M.compose(V.set(x, top + 0.27, z), q, S.set(r, 1, r))); });
+        });
+        // one cluster of volatile crystal, one cradle
+        const MG = window.AxonPerf.mergeGeometries, e = new THREE.Euler();
+        const cones = [[0, 0, 0.5, 1.7, 0], [0.36, 0.2, 0.3, 1.1, 0.5], [-0.33, 0.25, 0.3, 1.2, -0.45], [0.05, -0.38, 0.28, 0.95, 0.3], [-0.1, 0.4, 0.22, 0.8, -0.2]].map(([px, pz, r, h, tilt]) => ({ geo: new THREE.ConeGeometry(r, h, 5), matrix: new THREE.Matrix4().compose(new THREE.Vector3(px, 0.3 + h / 2, pz), new THREE.Quaternion().setFromEuler(e.set(tilt * 0.3, 0, tilt * 0.5)), new THREE.Vector3(1, 1, 1)) }));
+        const cradle = MG([{ geo: new THREE.CylinderGeometry(0.75, 0.9, 0.3, 8), matrix: new THREE.Matrix4().makeTranslation(0, 0.15, 0) }, { geo: new THREE.TorusGeometry(0.62, 0.06, 4, 12), matrix: new THREE.Matrix4().makeRotationX(Math.PI / 2).setPosition(0, 0.55, 0) }]);
+        barMat = gem(0xff5a2a, 1.4);
+        const gems = IM(MG(cones), barMat, barSpec.length), cradles = IM(cradle, gold, barSpec.length);
+        barSpec.forEach(([x, y, z], k) => { M.compose(V.set(x, y, z), q, S.set(1, 1, 1)); gems.setMatrixAt(k, M); cradles.setMatrixAt(k, M); });
+        inst = [frames, posts, rings, gems, cradles]; inst.forEach(m => { m.instanceMatrix.needsUpdate = true; });
+        barGone = k => { M.makeScale(0, 0, 0); gems.setMatrixAt(k, M); cradles.setMatrixAt(k, M); gems.instanceMatrix.needsUpdate = cradles.instanceMatrix.needsUpdate = true; };
+    }
+    let barMat = null, barGone = () => { };
 
     // ---------- the devices ----------
     function ground(S, x, z, y0) {
@@ -74,14 +95,8 @@ window.AxonToys = (function () {
     }
     function spot(S, x, z, y0) { for (const [dx, dz] of [[0, 0], [1.8, 0], [-1.8, 0], [0, 1.8], [0, -1.8], [2.6, 2.6], [-2.6, -2.6], [2.6, -2.6], [-2.6, 2.6]]) { const y = ground(S, x + dx, z + dz, y0); if (y !== null) return [x + dx, y, z + dz]; } return null; }
     function barrel(api, x, y, z) {
-        const g = new THREE.Group(); g.position.set(x, y, z);
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.9, 0.3, 8), gold); base.position.y = 0.15; g.add(base);
-        const core = new THREE.Group(); core.position.y = 0.3; g.add(core);
-        const m = gem(0xff5a2a, 1.4);
-        [[0, 0, 0.5, 1.7, 0], [0.36, 0.2, 0.3, 1.1, 0.5], [-0.33, 0.25, 0.3, 1.2, -0.45], [0.05, -0.38, 0.28, 0.95, 0.3], [-0.1, 0.4, 0.22, 0.8, -0.2]].forEach(([px, pz, r, h, tilt]) => { const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5), m); c.position.set(px, h / 2, pz); c.rotation.z = tilt * 0.5; c.rotation.x = tilt * 0.3; core.add(c); });
-        const band = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.06, 6, 20), gold); band.rotation.x = Math.PI / 2; band.position.y = 0.55; g.add(band);
-        g.add(tag('✹', '#ff5a2a', 2.5)); tidy(g, [core]); g.updateMatrix(); g.matrixAutoUpdate = false; api.scene.add(g);
-        devs.push({ kind: 'bar', g, core, m, c: new THREE.Vector3(x, y + 1, z), st: 0, t: 0, fuse: -1 });
+        const t = tag('✹', '#ff5a2a', 0); t.position.set(x, y + 2.5, z); api.scene.add(t);
+        barSpec.push([x, y, z]); devs.push({ kind: 'bar', g: t, k: barSpec.length - 1, c: new THREE.Vector3(x, y + 1, z), st: 0, t: 0, fuse: -1 });
     }
     function pylon(api, x, y, z) {
         const g = new THREE.Group(); g.position.set(x, y, z);
@@ -104,18 +119,34 @@ window.AxonToys = (function () {
         const keys = [a.entryZ - 5.5, a.exitZ + 5.5].map((z, i) => { const p = spot(api.solids, i ? 6 : -6, z, a.h); if (!p) return null; const k = new THREE.Group(); k.position.set(p[0], p[1], p[2]); const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.3, 1.3, 6), gold); post.position.y = 0.65; k.add(post); const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), gem(0x8fd8ff, 1.4)); c.position.y = 1.75; k.add(c); k.add(tag('⬇', '#8fd8ff', 2.9)); tidy(k, [c]); k.updateMatrix(); k.matrixAutoUpdate = false; api.scene.add(k); return { k, c, p: new THREE.Vector3(p[0], p[1] + 1.75, p[2]) }; }).filter(Boolean);
         devs.push({ kind: 'chan', g, ring, keys, a, top, st: 0, t: 0, mine: false });
     }
+    // ONE IDEA PER ARENA: each sector shows one tool and lets the player learn it; only the last one has everything.
+    //  bar = volatile crystals · vor = vortex pylon · chan = chandelier · pads = bounce pads · gun = mounted gun (turret.js)
+    const PLAN = [
+        { bar: 2, gun: 'mg' },                    // 1  the repeater
+        { bar: 4, pads: 2 },                      // 2  chain explosions, and the slam from a bounce pad
+        { bar: 1 },                               // 3  the Watcher's door stands here: the meteors are the show
+        { vor: 1, bar: 2 },                       // 4  the vortex, with crystals to drag the heap onto
+        { chan: 1 },                              // 5  the chandelier
+        { gun: 'gl', pads: 2 },                   // 6  the launcher
+        { vor: 1 },                               // 7  behind the ring lock: the vortex again, alone
+        { chan: 1, bar: 4, gun: 'mg', pads: 2 }   // 8  the last sector before the guardian: everything at once
+    ];
+    const plan = n => PLAN[n] || {};
     function build(api, layout) {
-        built = layout; told = {};
+        built = layout; told = {}; barSpec.length = 0;
         const S = api.solids;
-        for (const z of layout.zones) {
-            if (z.kind === 'corridor') { const s = z.stage % 2 ? 1 : -1; for (const [x, dz] of [[-s * 4.6, 9], [s * 4.2, 15]]) { const p = spot(S, x, z.z0 - dz, z.y); if (p) barrel(api, p[0], p[1], p[2]); } }
+        for (const z of layout.zones) {                                                             // corridors: one crystal each, by the first machines
+            if (z.kind === 'corridor') { const s = z.stage % 2 ? 1 : -1, p = spot(S, -s * 4.6, z.z0 - 10, z.y); if (p) barrel(api, p[0], p[1], p[2]); }
         }
         layout.arenas.forEach((a, n) => {
             if (a.state === 'clear') return;
-            for (const [x, dz] of [[-5, 6], [6, -3], [-9, -11], [13, 9]]) { const p = spot(S, x, a.cz + dz, a.h); if (p) barrel(api, p[0], p[1], p[2]); }
-            if (n % 2) { const p = spot(S, 0, a.cz, a.h); if (p) pylon(api, p[0], p[1], p[2]); } else chandelier(api, a);
-            for (const x of [-(a.half - 8), a.half - 8]) { const p = spot(S, x, a.cz + 1, a.h); if (p) pad(api, p[0], p[1], p[2], 3.2, 3.2); }
+            const q = plan(n);
+            [[-5, 6], [6, -3], [-9, -11], [13, 9]].slice(0, q.bar || 0).forEach(([x, dz]) => { const p = spot(S, x, a.cz + dz, a.h); if (p) barrel(api, p[0], p[1], p[2]); });
+            if (q.vor) { const p = spot(S, 0, a.cz, a.h); if (p) pylon(api, p[0], p[1], p[2]); }
+            if (q.chan) chandelier(api, a);
+            if (q.pads) for (const x of [-(a.half - 8), a.half - 8]) { const p = spot(S, x, a.cz + 1, a.h); if (p) pad(api, p[0], p[1], p[2], 3.2, 3.2); }
         });
+        instances(api);
     }
 
     // ---------- what they do ----------
@@ -128,7 +159,7 @@ window.AxonToys = (function () {
         for (const e of foes()) { const d = e.mesh.position.distanceTo(at); if (d < r) { try { e.takeDamage(Math.round(e.type === 'boss' ? dmg * 0.3 : Math.max(dmg, (e.hp || 0) * frac) * (d < r * 0.6 ? 1 : 0.75)), e.mesh.position.clone(), true); } catch (err) { } } }
     }
     function boom(d, mine) {
-        if (d.st) return; d.st = 1; API.scene.remove(d.g);
+        if (d.st) return; d.st = 1; API.scene.remove(d.g); d.g.material.dispose(); barGone(d.k);
         blast(d.c, 7.5, 130, 0xff5a2a, mine, 1); API.hitStop(0.05);
         sfx(a => { a.noise(0.6, 0.26, { type: 'lowpass', f0: 1300, f1: 70 }); a.tone('sine', 170, 38, 0.5, 0.22); a.noise(0.12, 0.12, { type: 'highpass', f0: 2600 }); });
         if (mine && P && !P.dead && P.mesh.position.distanceTo(d.c) < 4) P.takeDamage(10);
@@ -139,7 +170,7 @@ window.AxonToys = (function () {
         if (d.kind === 'bar') { boom(d, mine); return; }
         d.st = 1; d.t = 0; d.mine = mine;
         if (d.kind === 'vor') sfx(a => { a.tone('sawtooth', 90, 700, 2.1, 0.12, { lp: 1800 }); a.noise(2.1, 0.07, { type: 'bandpass', f0: 500 }); });
-        else { d.keys.forEach(k => API.scene.remove(k.k)); sfx(a => { a.tone('square', 1800, 600, 0.12, 0.08); a.noise(0.5, 0.1, { type: 'highpass', f0: 1500 }); }); API.shake(0.3); }
+        else { d.keys.forEach(k => scrap(k.k)); sfx(a => { a.tone('square', 1800, 600, 0.12, 0.08); a.noise(0.5, 0.1, { type: 'highpass', f0: 1500 }); }); API.shake(0.3); }
     }
 
     // ---------- every frame of the mission (level.js) ----------
@@ -150,12 +181,12 @@ window.AxonToys = (function () {
         if ((cullT -= dt) <= 0) {                                                                  // only what is near is drawn
             cullT = 0.2;
             for (const q of pads) q.g.visible = Math.abs(q.z - p.z) < SEE;
-            for (const d of devs) { const on = Math.abs((d.c ? d.c.z : d.a.cz) - p.z) < SEE; d.g.visible = on; if (d.kind === 'chan') { d.ring.visible = on; for (const k of d.keys) k.k.visible = on; } }
+            for (const d of devs) { const dz = Math.abs((d.c ? d.c.z : d.a.cz) - p.z), on = dz < SEE; d.g.visible = d.kind === 'bar' ? dz < 45 : on; if (d.kind === 'chan') { d.ring.visible = on; for (const k of d.keys) k.k.visible = on; } }
         }
         // -- pads --
         for (const q of pads) {
             if (Math.abs(p.z - q.z) > 40) continue;
-            q.t += dt; const k = Math.max(0, 1 - q.t * 3.2); q.skin.position.y = 0.2 - 0.14 * k * Math.cos(q.t * 26); q.skin.material.emissiveIntensity = 0.75 + 0.3 * Math.sin(time * 4 + q.x) + k * 2;
+            q.t += dt; const k = Math.max(0, 1 - q.t * 3.2); q.skin.position.y = q.top + 0.2 - 0.14 * k * Math.cos(q.t * 26); q.skin.material.emissiveIntensity = 0.75 + 0.3 * Math.sin(time * 4 + q.x) + k * 2;
             if (player.dead) continue;
             if (Math.abs(p.x - q.x) < q.w / 2 && Math.abs(p.z - q.z) < q.d / 2 && p.y > q.top - 0.3 && p.y < q.top + 0.7 && player.velocity.y <= 1) {
                 player.velocity.y = 34; p.y = q.top + 0.35; player.isGrounded = false; player.jumpCount = 1; player.airDashUsed = false;
@@ -177,6 +208,7 @@ window.AxonToys = (function () {
                 }
             }
         }
+        if (barMat) barMat.emissiveIntensity = 1.1 + 0.5 * Math.sin(time * 7);                    // all the volatile crystals breathe together (one material)
         // -- devices --
         const hb = api.hb || [], pj = api.pj || [];
         const struck = (c, r) => { for (const h of hb) if (h.pos.distanceToSquared(c) < (r + 1.2) ** 2) return true; for (const s of pj) if (s.mesh.position.distanceToSquared(c) < r * r) { if (!s.pierce) s.life = 0; return true; } return false; };
@@ -184,8 +216,7 @@ window.AxonToys = (function () {
             const d = devs[id]; const far = Math.abs(p.z - (d.c ? d.c.z : d.a.cz)) > 75; if (far && !d.st && !(d.fuse >= 0)) continue;
             if (d.kind === 'bar') {
                 if (d.st) continue;
-                d.t += dt; d.core.scale.setScalar(1 + 0.05 * Math.sin(d.t * 7)); d.m.emissiveIntensity = 1.1 + 0.5 * Math.sin(d.t * 7);
-                if (d.fuse >= 0) { d.fuse -= dt; d.m.emissiveIntensity = 3; if (d.fuse <= 0) boom(d, d.mine); continue; }
+                if (d.fuse >= 0) { d.fuse -= dt; if (d.fuse <= 0) boom(d, d.mine); continue; }
                 if (p.distanceToSquared(d.c) < 144) hint('bar');
                 if (!player.dead && struck(d.c, 1.3)) fire(d, id, true);
             } else if (d.kind === 'vor') {
@@ -203,7 +234,7 @@ window.AxonToys = (function () {
                         d.st = 2; d.t = 0; d.disc.material.opacity = 0; d.orb.scale.setScalar(0.4); d.orb.material.emissiveIntensity = 0.1;
                         const n0 = foes().length; blast(_v.copy(d.base).setY(d.base.y + 1.2).clone(), 7.5, 160, 0xb58cff, d.mine, 1.4); api.hitStop(0.1);
                         sfx(a => { a.noise(0.8, 0.28, { type: 'lowpass', f0: 1600, f1: 60 }); a.tone('sine', 220, 30, 0.7, 0.26); });
-                        const n = n0 - foes().length; if (d.mine && n > 1) api.toast(T[lang()].multi(n));
+                        const n = n0 - foes().length; if (d.mine && n > 1) { api.toast(T[lang()].multi(n)); if (n >= 4 && window.AxonSquad) window.AxonSquad.earn('crush'); }
                     }
                 } else { d.t += dt; if (d.t > 22) { d.st = 0; d.orb.scale.setScalar(1); d.orb.material.emissiveIntensity = 1.3; sfx(a => a.tone('triangle', 500, 1000, 0.2, 0.05)); } }   // recharging
             } else {                                                                              // chandelier
@@ -213,19 +244,19 @@ window.AxonToys = (function () {
                 } else if (d.st === 1) {
                     d.t += dt; const k = Math.min(1, d.t / 0.5); d.g.position.y = d.top - (d.top - d.a.h - 3.4) * k * k; d.ring.material.opacity = 0.9;
                     if (k >= 1) {
-                        d.st = 2; d.t = 0; api.scene.remove(d.ring);
+                        d.st = 2; d.t = 0; scrap(d.ring);
                         const at = new THREE.Vector3(0, d.a.h + 1, d.a.cz), n0 = foes().length; blast(at, 9.5, 200, 0x8fd8ff, d.mine, 1.4); api.hitStop(0.12); api.shake(1.2);
                         for (let j = 0; j < 5; j++) api.spawnSparks(_v.set((Math.random() - 0.5) * 12, d.a.h + 0.5 + Math.random() * 3, d.a.cz + (Math.random() - 0.5) * 12), 0x8fd8ff, 22, 16);
                         sfx(a => { a.noise(1.1, 0.3, { type: 'lowpass', f0: 2200, f1: 60 }); a.tone('sine', 140, 26, 0.9, 0.28); for (let j = 0; j < 6; j++) a.tone('triangle', 1800 + Math.random() * 1800, 900, 0.12, 0.05, { delay: 0.05 + j * 0.06 }); });
                         if (d.mine && !player.dead && Math.hypot(p.x, p.z - d.a.cz) < 8 && Math.abs(p.y - d.a.h) < 5) player.takeDamage(18);
-                        const n = n0 - foes().length; if (d.mine && n > 1) api.toast(T[lang()].multi(n));
+                        const n = n0 - foes().length; if (d.mine && n > 1) { api.toast(T[lang()].multi(n)); if (n >= 4 && window.AxonSquad) window.AxonSquad.earn('crush'); }
                     }
-                } else if (d.st === 2) { d.t += dt; d.g.position.y -= dt * 0.6; d.g.scale.setScalar(Math.max(0.01, 1 - d.t / 2.5)); if (d.t > 2.5) { d.st = 3; api.scene.remove(d.g); } }
+                } else if (d.st === 2) { d.t += dt; d.g.position.y -= dt * 0.6; d.g.scale.setScalar(Math.max(0.01, 1 - d.t / 2.5)); if (d.t > 2.5) { d.st = 3; scrap(d.g); } }
             }
         }
     }
     // a teammate set a device off (coop.js): it goes off here too — the damage is theirs
     function remote(m) { const d = devs[m.n]; if (d && API) fire(d, m.n, false); }
 
-    return { pad, tick, remote, get devs() { return devs; }, get pads() { return pads; }, fire };
+    return { plan, pad, tick, remote, get devs() { return devs; }, get pads() { return pads; }, fire };
 })();

@@ -1359,7 +1359,7 @@ async function initCyberGame() {
         accumulator += frameTime;
 
         while (accumulator >= FIXED_DT) {
-            let dt = FIXED_DT;
+            let dt = FIXED_DT * (window.AxonSlowK || 1);   // slowmo.js
             gameTime += dt;
             const time = gameTime;
 
