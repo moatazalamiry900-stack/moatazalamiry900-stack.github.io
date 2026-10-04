@@ -40,13 +40,19 @@ window.AxonHeroShadow = (function () {
         geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
         geo.setIndex(idx); geo.computeVertexNormals(); geo.boundingSphere = g.boundingSphere ? g.boundingSphere.clone() : null; if (!geo.boundingSphere) geo.computeBoundingSphere();
         const px = new THREE.SkinnedMesh(geo, ghost); px.name = NAME; px.bind(sk, mesh.bindMatrix);
+        // the hero's own code repaints every mesh of the body (skins, hit flashes): this one must never take a visible material
+        Object.defineProperty(px, 'material', { get: () => ghost, set: () => { }, configurable: true });
+        px.clone = () => new THREE.Object3D();                                        // after-images and decoys are CLONES of the hero, repainted in one colour: the stand-in is never part of a copy
         px.position.copy(mesh.position); px.quaternion.copy(mesh.quaternion); px.scale.copy(mesh.scale);
         px.castShadow = true; px.receiveShadow = false; px.frustumCulled = mesh.frustumCulled; px.renderOrder = -5;
         return px;
     }
     // root: a hero's group. Returns how many triangles left the shadow pass.
+    // SWITCHED OFF: on a real phone the hero turned into dark boxes with it, and it could not be reproduced on the test machine.
+    // The hero is drawn exactly as before. (To try it again: localStorage 'axon.heroShadowLite' = '1'.)
+    const ON = (() => { try { return localStorage.getItem('axon.heroShadowLite') === '1'; } catch (e) { return false; } })();
     function apply(root) {
-        if (!root || has(root)) return 0;
+        if (!ON || !root || has(root)) return 0;
         const big = []; root.traverse(o => { if (o.isSkinnedMesh && o.castShadow && o.geometry && o.geometry.attributes.position.count > 600) big.push(o); });
         let saved = 0;
         for (const m of big) {
