@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><script>(function mcPageBoot(C) {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(C.sw, { scope: C.scope }).catch(function () { });
+      if (!navigator.serviceWorker.controller) {
+        var k = 'mc-sw-reload';
+        try {
+          if (!sessionStorage.getItem(k)) navigator.serviceWorker.addEventListener('controllerchange', function () { sessionStorage.setItem(k, '1'); location.reload(); });
+        } catch (e) { }
+      }
+    }
+    if (C.keepAwake) {
+      var w = function () { if (navigator.wakeLock && !document.hidden) navigator.wakeLock.request('screen').catch(function () { }); };
+      document.addEventListener('visibilitychange', w); w();
+    }
+    var box = null, n = 0;
+    function show(t) {
+      if (n > 8) return; n++;
+      if (!box) {
+        box = document.createElement('div');
+        box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;max-height:45%;overflow:auto;background:rgba(40,0,8,.94);color:#ffb3b3;font:12px/1.45 monospace;padding:10px 12px;border:1px solid #ff4d6d;border-radius:8px;white-space:pre-wrap';
+        box.onclick = function () { box.remove(); box = null; };
+        (document.body || document.documentElement).appendChild(box);
+        var h = document.createElement('div'); h.textContent = 'Game error (tap to hide)'; h.style.cssText = 'color:#fff;font-weight:bold;margin-bottom:6px'; box.appendChild(h);
+      }
+      var l = document.createElement('div'); l.textContent = t; l.style.marginBottom = '6px'; box.appendChild(l);
+    }
+    window.addEventListener('error', function (e) {
+      var t = e.target;
+      if (t && t !== window && (t.src || t.href)) { if (t.tagName === 'SCRIPT') show('Failed to load: ' + (t.src || t.href)); return; }
+      show((e.message || 'Error') + (e.filename ? '  (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : ''));
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) { show('Unhandled promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+  })({"sw":"/ahwal-guide-apk/__mc_sw.js","scope":"/ahwal-guide-apk/","keepAwake":true});</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f6b5c">
+<link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>دليل الأحوال الشخصية الأردني</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky search console on top, filter rails, then a single column of answer cards; side tabs for tables */
+:root{
+  --bg:#f3f6f5; --surface:#ffffff; --ink:#14231f; --muted:#5b6d68; --line:#d9e2df;
+  --accent:#0f6b5c; --accent-soft:#e1f0ec; --brass:#a8741a; --brass-soft:#f6ecd8;
+  --t:#0f6b5c; --n:#3557a8; --v:#a8741a; --s:#8a3f6e; --h:#4f5b2a;
+  --f-display:"Reem Kufi","Noto Kufi Arabic","IBM Plex Sans Arabic","Noto Sans Arabic",Tahoma,sans-serif;
+  --f-body:"IBM Plex Sans Arabic","Noto Sans Arabic","Noto Naskh Arabic","Segoe UI",Tahoma,Arial,sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1614; --surface:#15201d; --ink:#e4ece9; --muted:#93a7a1; --line:#26352f;
+  --accent:#4fc2a8; --accent-soft:#183a32; --brass:#e0b15a; --brass-soft:#3a2f18;
+  --t:#4fc2a8; --n:#8aa8f0; --v:#e0b15a; --s:#d98bbd; --h:#b7c47c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1614; --surface:#15201d; --ink:#e4ece9; --muted:#93a7a1; --line:#26352f;
+  --accent:#4fc2a8; --accent-soft:#183a32; --brass:#e0b15a; --brass-soft:#3a2f18;
+  --t:#4fc2a8; --n:#8aa8f0; --v:#e0b15a; --s:#d98bbd; --h:#b7c47c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.7;direction:rtl}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:20px 60px}
+header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.seal{width:52px;height:52px;flex:none;color:var(--accent)}
+h1{font-family:var(--f-display);font-size:clamp(1.5rem,4.5vw,2.1rem);margin:0;line-height:1.3;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.92rem}
+.console{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;margin-top:14px;border-bottom:1px solid var(--line)}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--accent);border-radius:999px;padding:6px 16px}
+.search svg{width:22px;height:22px;color:var(--accent);flex:none}
+.search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:1.05rem;color:var(--ink);padding:8px 0}
+.search button{border:0;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:4px 12px;font:inherit;font-size:.85rem;cursor:pointer}
+.tabs{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.tab{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;font:inherit;font-size:.9rem;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.rail{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 12px 5px 10px;font:inherit;font-size:.88rem;cursor:pointer}
+.chip svg{width:18px;height:18px}
+.chip .c{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{border-color:currentColor;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ty[aria-pressed="true"]{background:color-mix(in srgb,var(--k) 14%,var(--surface));color:var(--k);border-color:var(--k)}
+.label{font-size:.78rem;color:var(--muted);letter-spacing:.02em;margin:16px 0 -6px;font-weight:600}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.quick button{border:0;background:var(--brass-soft);color:var(--brass);border-radius:6px;padding:3px 10px;font:inherit;font-size:.83rem;cursor:pointer}
+.meta{display:flex;justify-content:space-between;align-items:center;margin:18px 0 8px;color:var(--muted);font-size:.88rem}
+.list{display:grid;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start}
+.badge{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--k) 13%,transparent);color:var(--k)}
+.badge svg{width:24px;height:24px}
+.body{min-width:0}
+.q{font-weight:600;margin:0;font-size:1rem}
+.a{font-family:var(--f-display);font-size:1.25rem;color:var(--k);margin:2px 0 4px;line-height:1.45}
+.d{margin:0;color:var(--muted);font-size:.93rem}
+.foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.art{font-size:.78rem;font-weight:600;border:1px solid var(--line);border-radius:6px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.ax{font-size:.78rem;color:var(--muted);display:inline-flex;gap:4px;align-items:center}
+.ax svg{width:14px;height:14px}
+mark{background:var(--brass-soft);color:inherit;border-radius:3px;padding:0 2px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px;background:var(--surface);border:1px dashed var(--line);border-radius:var(--r)}
+.panel h2{font-family:var(--f-display);font-size:1.35rem;margin:22px 0 6px}
+.panel p.lead{color:var(--muted);margin:0 0 12px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:.92rem}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th{font-size:.8rem;color:var(--muted);font-weight:600;background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.8rem;font-weight:600}
+.p-r{background:var(--accent-soft);color:var(--accent)}
+.p-b{background:var(--brass-soft);color:var(--brass)}
+.p-f{background:color-mix(in srgb,var(--s) 14%,transparent);color:var(--s)}
+.frac{font-family:var(--f-display);font-size:1.1rem;color:var(--brass)}
+.timeline{display:grid;gap:8px}
+.tl-row{display:grid;grid-template-columns:minmax(110px,30%) 1fr;gap:10px;align-items:center}
+.tl-name{font-size:.9rem;font-weight:600}
+.tl-bar{height:30px;border-radius:6px;background:var(--accent-soft);position:relative;overflow:hidden}
+.tl-fill{position:absolute;inset-block:0;right:0;background:var(--accent);display:flex;align-items:center;padding-inline:8px;color:var(--surface);font-size:.8rem;font-weight:600;white-space:nowrap}
+.note{background:var(--brass-soft);border-radius:var(--r);padding:12px 14px;font-size:.92rem;margin-top:14px}
+.about li{margin-bottom:6px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+/* glossary terms inside cards */
+.term{all:unset;cursor:help;border-bottom:1.5px dotted var(--brass);color:inherit}
+.term:hover,.term:focus-visible{background:var(--brass-soft);outline:none}
+.sheet{position:fixed;inset-inline:0;bottom:0;z-index:20;padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.sheet-in{max-width:620px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--brass);border-radius:14px;padding:14px 16px;box-shadow:0 -8px 30px rgba(0,0,0,.18);pointer-events:auto;transform:translateY(0);transition:transform .2s}
+.sheet[hidden]{display:block!important;visibility:hidden}.sheet[hidden] .sheet-in{transform:translateY(120%)}
+.sh-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sh-term{font-family:var(--f-display);font-size:1.3rem;color:var(--brass);margin:0}
+.sh-def{margin:6px 0 10px}
+.sh-acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:4px 12px;font:inherit;font-size:.85rem;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.x{border:0;background:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1}
+/* glossary tab */
+.abc{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 14px}
+.abc button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.abc button:disabled{opacity:.3;cursor:default}
+.abc button[aria-pressed="true"]{background:var(--brass);color:var(--surface);border-color:var(--brass)}
+.gl-filter{display:flex;gap:6px;flex-wrap:wrap}
+.gl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.gl{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.gl h3{font-family:var(--f-display);font-size:1.1rem;color:var(--brass);margin:0 0 4px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.gl h3 small{font-family:var(--f-body);font-size:.75rem;color:var(--muted);font-weight:600}
+.gl p{margin:0;font-size:.93rem}
+.letter{font-family:var(--f-display);font-size:1.6rem;color:var(--accent);margin:18px 0 6px;grid-column:1/-1;border-bottom:1px solid var(--line)}
+/* map tab */
+.mapnav{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.mapnav a{font-size:.85rem;color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface)}
+.journey{position:relative;display:grid;gap:6px;margin-top:8px}
+.journey::before{content:"";position:absolute;top:24px;bottom:24px;right:calc(50% - 2px);width:4px;border-radius:2px;background:repeating-linear-gradient(to bottom,var(--accent) 0 10px,transparent 10px 16px)}
+.stop{display:grid;grid-template-columns:1fr 56px 1fr;align-items:center;gap:8px}
+.stop .node{width:52px;height:52px;border-radius:50%;background:var(--surface);border:3px solid var(--accent);display:grid;place-items:center;color:var(--accent);position:relative;z-index:1;justify-self:center;cursor:pointer}
+.stop .node svg{width:24px;height:24px}
+.stop .lab{all:unset;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
+.stop .lab b{display:block;font-size:.95rem}
+.stop .lab span{font-size:.8rem;color:var(--muted)}
+.stop:nth-child(even) .lab{grid-column:3;grid-row:1}.stop:nth-child(even) .node{grid-column:2;grid-row:1}
+.stop:nth-child(odd) .lab{grid-column:1;text-align:left}
+.stop .lab:hover,.stop .node:hover{border-color:var(--accent)}
+.step-no{font-family:var(--f-display);color:var(--brass);font-size:.8rem}
+.wheel-wrap{display:grid;grid-template-columns:minmax(0,320px) 1fr;gap:16px;align-items:center}
+.wheel svg{width:100%;height:auto;display:block}
+.wheel path{cursor:pointer;transition:opacity .15s}
+.wheel path:hover{opacity:.8}
+.legend{display:grid;gap:4px}
+.legend button{all:unset;cursor:pointer;display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;padding:4px 8px;border-radius:6px;font-size:.9rem}
+.legend button:hover,.legend button:focus-visible{background:var(--accent-soft)}
+.legend i{width:14px;height:14px;border-radius:4px;display:block}
+.legend em{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums}
+.matrix{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.matrix table{min-width:560px}
+.matrix th{text-align:center}
+.matrix th:first-child{text-align:right}
+.matrix td{text-align:center;padding:4px}
+.cell{all:unset;cursor:pointer;display:block;border-radius:6px;padding:8px 0;font-weight:700;font-variant-numeric:tabular-nums}
+.cell:focus-visible{outline:3px solid var(--brass)}
+.cell.z{color:var(--line);cursor:default}
+.wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:8px}
+.tile{all:unset;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:2px;min-width:0}
+.tile:hover,.tile:focus-visible{border-color:var(--brass)}
+.tile b{font-family:var(--f-display);font-size:2rem;line-height:1.1;color:var(--k,var(--accent));font-variant-numeric:tabular-nums}
+.tile small{color:var(--muted);font-size:.75rem;font-weight:600}
+.tile span{font-size:.88rem}
+.ruler{display:flex;height:46px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.ruler button{all:unset;cursor:pointer;display:grid;place-items:center;font-family:var(--f-display);color:var(--surface);font-size:.95rem;min-width:0}
+.ruler button:hover,.ruler button:focus-visible{filter:brightness(1.15)}
+.ticks{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.chlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;margin-top:10px}
+.chlist button{all:unset;cursor:pointer;display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.9rem}
+.chlist button:hover{border-color:var(--accent)}
+.chlist i{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--surface);font-style:normal;font-family:var(--f-display)}
+.chlist small{display:block;color:var(--muted);font-size:.75rem}
+.active-filter{display:inline-flex;gap:6px;align-items:center;background:var(--brass-soft);color:var(--brass);border-radius:999px;padding:2px 4px 2px 10px;font-size:.85rem;font-weight:600}
+.active-filter button{all:unset;cursor:pointer;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--surface)}
+@media (max-width:640px){.wheel-wrap{grid-template-columns:1fr}.wheel{max-width:300px;margin:0 auto}}
+@media (max-width:480px){.card{grid-template-columns:36px 1fr;padding:12px}.badge{width:36px;height:36px}.a{font-size:1.12rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <defs>
+  <symbol id="i-T" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/></symbol>
+  <symbol id="i-N" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 4 7 20M17 4l-2 16M4 9h17M3 15h17"/></symbol>
+  <symbol id="i-V" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></symbol>
+  <symbol id="i-S" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-H" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 4 6 6M11 7l6 6M12.5 5.5l-4 4 6 6 4-4M9.5 12.5 3 19M3 21h9"/></symbol>
+  <symbol id="a-zw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="14" r="5"/><circle cx="15" cy="14" r="5"/><path d="m10 4 2-2 2 2-2 2z"/></symbol>
+  <symbol id="a-mh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3 3 7 3s7-1.3 7-3v-5"/></symbol>
+  <symbol id="a-tl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="12" r="4"/><circle cx="17" cy="12" r="4"/><path d="M12 3v4M12 17v4"/></symbol>
+  <symbol id="a-tf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16M6 21V10M18 21V10M12 21V10M3 10l9-6 9 6z"/></symbol>
+  <symbol id="a-id" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></symbol>
+  <symbol id="a-ns" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M5 16.5V12h14v4.5"/></symbol>
+  <symbol id="a-hd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9H3z"/><circle cx="12" cy="13" r="2"/><path d="M9 20v-2a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="a-ah" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="7" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></symbol>
+  <symbol id="a-ws" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h5"/></symbol>
+  <symbol id="a-ir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 21V11M12 11 7 6M12 11l5-5M12 15l-4-3M12 15l4-3"/><circle cx="7" cy="5" r="1.6"/><circle cx="17" cy="5" r="1.6"/></symbol>
+  <symbol id="a-ij" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v3h6V3M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+ </defs>
+</svg>
+
+<div class="wrap">
+ <header class="top">
+  <svg class="seal" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2"><circle cx="26" cy="26" r="24"/><circle cx="26" cy="26" r="18" stroke-dasharray="2 3"/><path d="M26 13v26M18 39h16M15 20h22M15 20l-4 9a4 4 0 0 0 8 0zM37 20l-4 9a4 4 0 0 0 8 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div>
+   <h1>دليل قانون الأحوال الشخصية الأردني</h1>
+   <p class="sub">القانون رقم (15) لسنة 2019 · المدد والأعداد والقيم والشروط في مكان واحد</p>
+  </div>
+ </header>
+
+ <div class="console">
+  <label class="search" for="q">
+   <svg><use href="#i-search"/></svg>
+   <input id="q" type="search" placeholder="اكتب سؤالك: مدة العدة، سن الحضانة، شروط الحاضن…" autocomplete="off">
+   <button id="clear" type="button" hidden>مسح</button>
+  </label>
+  <div class="tabs" role="tablist">
+   <button class="tab" role="tab" aria-selected="true" data-tab="guide">الدليل الذكي</button>
+   <button class="tab" role="tab" aria-selected="false" data-tab="map">الخريطة الرسومية</button>
+   <button class="tab" role="tab" aria-selected="false" data-tab="gloss">قاموس المصطلحات</button>
+   <button class="tab" role="tab" aria-selected="false" data-tab="firqa">أنواع الفرقة</button>
+   <button class="tab" role="tab" aria-selected="false" data-tab="irth">فروض الإرث</button>
+   <button class="tab" role="tab" aria-selected="false" data-tab="idda">العِدد بصريًا</button>
+   <button class="tab" role="tab" aria-selected="false" data-tab="about">عن القانون</button>
+  </div>
+ </div>
+
+ <section id="p-guide" class="panel">
+  <p class="label">نوع المعلومة</p>
+  <div class="rail" id="types"></div>
+  <p class="label">المحور</p>
+  <div class="rail" id="axes"></div>
+  <div class="quick" id="quick"></div>
+  <div class="meta"><span id="count"></span><span>الكلمة المنقطة تحتها = اضغط لتفسيرها</span></div>
+  <div class="list" id="list"></div>
+ </section>
+
+ <section id="p-map" class="panel" hidden>
+  <nav class="mapnav"><a href="#m1">رحلة الأسرة</a><a href="#m2">عجلة المحاور</a><a href="#m3">مصفوفة الفهرس</a><a href="#m4">جدار الأرقام</a><a href="#m5">مسطرة المواد</a></nav>
+
+  <h2 id="m1">رحلة الأسرة في القانون</h2>
+  <p class="lead">القانون مرتب كمسار حياة الأسرة: من الخطبة حتى توزيع التركة. اضغط أي محطة لعرض معلوماتها.</p>
+  <div class="journey" id="journey"></div>
+
+  <h2 id="m2">عجلة المحاور</h2>
+  <p class="lead">حجم كل قطاع يساوي عدد المعلومات في المحور. اضغط القطاع أو اسمه.</p>
+  <div class="wheel-wrap"><div class="wheel" id="wheel"></div><div class="legend" id="legend"></div></div>
+
+  <h2 id="m3">مصفوفة الفهرس</h2>
+  <p class="lead">كل خلية تجمع محورًا مع نوع معلومة. مثال: خلية "الحضانة × المدد" تعرض كل مدد الحضانة دفعة واحدة. كلما اشتد اللون زاد العدد.</p>
+  <div class="matrix"><table id="matrix"></table></div>
+
+  <h2 id="m4">جدار الأرقام</h2>
+  <p class="lead">أشهر أرقام القانون. اضغط الرقم لمعرفة تفاصيله.</p>
+  <div class="wall" id="wall"></div>
+
+  <h2 id="m5">مسطرة المواد: الأبواب التسعة</h2>
+  <p class="lead">المواد من 1 إلى 329 مقسمة على تسعة أبواب، وعرض كل باب يساوي عدد مواده. اضغط بابًا لعرض معلوماته.</p>
+  <div class="ruler" id="ruler"></div>
+  <div class="ticks"><span>م 1</span><span>م 80</span><span>م 156</span><span>م 254</span><span>م 329</span></div>
+  <div class="chlist" id="chlist"></div>
+ </section>
+
+ <section id="p-gloss" class="panel" hidden>
+  <h2>قاموس المصطلحات</h2>
+  <p class="lead">تفسير مبسط للكلمات الفقهية والقانونية الواردة في القانون، مرتبة أبجديًا.</p>
+  <div class="gl-filter"><label class="search" for="gq" style="flex:1;padding:2px 14px;border-width:1px"><svg><use href="#i-search"/></svg><input id="gq" type="search" placeholder="ابحث عن مصطلح…" autocomplete="off"></label></div>
+  <div class="abc" id="abc"></div>
+  <div class="gl-grid" id="glgrid"></div>
+ </section>
+
+ <section id="p-firqa" class="panel" hidden>
+  <h2>نوع الفرقة في كل حالة</h2>
+  <p class="lead">يحدد نوع الفرقة إمكان الرجعة وعدد الطلقات المحسوبة.</p>
+  <div class="tbl"><table>
+   <thead><tr><th>الحالة</th><th>النوع</th><th>المدة المرتبطة</th><th>المادة</th></tr></thead>
+   <tbody id="firqaRows"></tbody>
+  </table></div>
+  <div class="note">الطلاق الرجعي لا يزيل الزوجية في الحال، وللزوج مراجعة زوجته في العدة قولًا أو فعلًا دون رضاها ودون مهر جديد (م 92، 98). وتبين المطلقة رجعيًا بانقضاء العدة دون رجعة (م 99).</div>
+ </section>
+
+ <section id="p-irth" class="panel" hidden>
+  <h2>أصحاب الفروض الاثنا عشر</h2>
+  <p class="lead">أربعة من الذكور وثمان من النساء (م 285). الجدول يلخص أحوال كل وارث.</p>
+  <div class="tbl"><table>
+   <thead><tr><th>الوارث</th><th>الفرض</th><th>متى</th><th>المادة</th></tr></thead>
+   <tbody id="irthRows"></tbody>
+  </table></div>
+  <div class="note">الوصية لغير الوارث تنفذ في حدود <b>الثلث</b>، وما زاد يحتاج إجازة الورثة بعد الوفاة، والوصية للوارث لا تنفذ إلا بإجازتهم (م 274). الوصية الواجبة لأولاد الابن المتوفى قبل أبيه لا تتجاوز الثلث، وتقدَّم على الوصايا الاختيارية (م 279).</div>
+ </section>
+
+ <section id="p-idda" class="panel" hidden>
+  <h2>مقارنة مدد العدة والمهل</h2>
+  <p class="lead">أطوال الأشرطة متناسبة مع المدة بالأشهر، والحد الأقصى المرسوم سنتان.</p>
+  <div class="timeline" id="tline"></div>
+  <div class="note">العدة تبدأ منذ وقوع الفرقة (م 145/ب). وإذا وقع الطلاق بعد العقد الصحيح فلا عدة إلا بالدخول أو الخلوة الصحيحة (م 145/ج). أما عدة الوفاة فتلزم دخل بها أم لم يدخل (م 146).</div>
+ </section>
+
+ <section id="p-about" class="panel about" hidden>
+  <h2>عن القانون وتعديلاته</h2>
+  <ul>
+   <li>صدر <b>قانون الأحوال الشخصية رقم (15) لسنة 2019</b> في الجريدة الرسمية العدد 5578 بتاريخ 2/6/2019، وحلّ محل القانون المؤقت رقم (36) لسنة 2010.</li>
+   <li>بدأ سريانه في <b>2/7/2019</b> بعد مرور ثلاثين يومًا على نشره.</li>
+   <li>أدخل مجلس الأمة تعديلات على <b>57 مادة</b> من القانون المؤقت كليًا أو جزئيًا، ويتكون القانون من <b>329 مادة</b> في تسعة أبواب.</li>
+   <li>أبرز ما استقر عليه: سن الزواج 18 سنة شمسية مع استثناء من بلغ 16 بإذن القاضي وموافقة قاضي القضاة (م 10)، وإثبات النسب بالوسائل العلمية القطعية (م 157)، وتنظيم المبيت والاستزارة والاتصال بالمحضون (م 181)، وإنشاء صندوق تسليف النفقة (م 321).</li>
+   <li>سريان القانون (م 326–327): يطبق على الدعاوى التي لم تفصل فيها المحكمة الابتدائية، ولا يطبق على حالات الوفاة السابقة لنفاذه.</li>
+   <li>المراد بالسنة في القانون هي <b>السنة القمرية</b> ما لم يُنص على غير ذلك (م 322)، ولذلك ذُكرت "شمسية" صراحة في الأعمار.</li>
+   <li>ما لا نص فيه يُرجع فيه إلى الراجح من مذهب أبي حنيفة (م 325).</li>
+  </ul>
+  <div class="note">هذا الدليل تلخيص تعليمي مبني على نص القانون رقم 15 لسنة 2019 المنشور. لم أجد تعديلًا لاحقًا عليه حتى تاريخ إعداد الدليل، لكن تحقق من النص الرسمي لدى دائرة قاضي القضاة أو محامٍ قبل الاعتماد عليه في قضية.</div>
+ </section>
+</div>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-live="polite">
+ <div class="sheet-in">
+  <div class="sh-top"><p class="sh-term" id="shT"></p><button class="x" id="shX" aria-label="إغلاق">×</button></div>
+  <p class="sh-def" id="shD"></p>
+  <div class="sh-acts"><button class="btn pri" id="shS">ابحث عنه في الدليل</button><button class="btn" id="shG">افتح القاموس</button></div>
+ </div>
+</div>
+
+<script>
+const TYPES={T:{n:"المدد والأعمار",c:"--t"},N:{n:"الأعداد",c:"--n"},V:{n:"القيم والمبالغ",c:"--v"},S:{n:"الشروط",c:"--s"},H:{n:"الأحكام",c:"--h"}};
+const AXES={zw:"الخطبة والزواج",mh:"المهر والنفقة",tl:"الطلاق والخلع",tf:"التفريق القضائي",id:"العدة",ns:"النسب والرضاع",hd:"الحضانة والمشاهدة",ah:"الأهلية والولاية",ws:"الوصية",ir:"الإرث",ij:"التوثيق والعقوبات"};
+// [type, axis, question, answer, detail, article, extra keywords]
+const D=[
+["T","zw","ما سن الزواج؟","18 سنة شمسية كاملة","يشترط في أهلية الزواج أن يكون الخاطب والمخطوبة عاقلين وأن يتم كل منهما ثماني عشرة سنة شمسية.","10/أ","سن الاهلية عمر الزواج القاصر"],
+["T","zw","هل يجوز زواج من هو دون 18؟","استثناءً لمن بلغ 16 سنة شمسية","يأذن القاضي بموافقة قاضي القضاة في حالات خاصة، بعد التحقق من الرضا والاختيار، إذا كانت في الزواج ضرورة تقتضيها المصلحة. أي من أتم 15 ودخل في 16. ويكتسب أهلية كاملة في كل ما يتعلق بالزواج والفرقة.","10/ب","قاصر استثناء اذن زواج صغار"],
+["S","zw","شروط إذن زواج من أكمل 15 ولم يكمل 18","كفاءة، فارق سن ≤ 15 سنة، الخاطب غير متزوج","تعليمات رقم 1 لسنة 2017: التحقق من الرضا التام والضرورة، ألا يتجاوز فارق السن 15 عامًا، ألا يكون الخاطب متزوجًا، ألا يسبب الزواج انقطاعًا عن التعليم المدرسي، قدرة الخاطب على النفقة والمهر والمسكن، الفحص الطبي، موافقة الولي، مهر لا يقل عن مهر المثل، ودورة المقبلين على الزواج.","تعليمات 2017","قاصر تعليمات فارق العمر"],
+["T","zw","ما حكم فارق العمر بين الخاطبين؟","أكثر من 20 سنة يُمنع العقد","يمنع إجراء العقد على امرأة إذا كان خاطبها يكبرها بأكثر من عشرين سنة إلا بعد أن يتحقق القاضي من رضاها واختيارها.","11","فرق السن العمر"],
+["N","zw","كم عدد الشهود على عقد الزواج؟","رجلان أو رجل وامرأتان","مسلمين إذا كان الزوجان مسلمين، عاقلين بالغين سامعين الإيجاب والقبول فاهمين المقصود. وتجوز شهادة أصول الخاطبين وفروعهما.","8","شهود شهادة"],
+["H","zw","هل تنعقد الخطبة زواجًا؟","لا","لا ينعقد الزواج بالخطبة ولا بقراءة الفاتحة ولا بقبض شيء من المهر ولا بقبول الهدية. الخطبة طلب التزوج أو الوعد به.","2–3","خطبة فاتحة"],
+["H","zw","ماذا يُرد عند العدول عن الخطبة؟","ما دُفع من المهر دائمًا، والهدايا يردها العادل","يسترد الخاطب ما دفع على حساب المهر أيًّا كان العادل. ويرد من عدل الهدايا إن كانت قائمة وإلا مثلها أو قيمتها، ولا يسترد شيء من الهدايا إذا انتهت الخطبة بالوفاة أو بسبب قاهر.","4","عدول فسخ الخطبة هدايا جهاز"],
+["S","zw","شروط الزواج المكرر (التعدد)","قدرة على المهر والنفقة وإفهام المخطوبة","يتحقق القاضي قبل العقد من قدرة الزوج المالية على المهر والإنفاق على من تجب نفقته، وإفهام المخطوبة أنه متزوج. وتبلغ المحكمة الزوجة الأولى بعد العقد.","13","تعدد الزوجات زوجة ثانية"],
+["N","zw","كم زوجة يجوز الجمع بينهن؟","4 زوجات كحد أقصى","يحرم الجمع بين أكثر من أربع زوجات أو معتدات من طلاق رجعي، والزواج بالخامسة فاسد.","28/و، 31/ج","تعدد اربع"],
+["S","zw","شروط الولي في الزواج","عاقل بالغ راشد، ومسلم إن كانت مسلمة","الولي هو العصبة بنفسه على ترتيب الراجح من مذهب أبي حنيفة. ورضا أحد الأولياء المتساوين يسقط اعتراض الآخرين.","14–16","ولي ولاية التزويج"],
+["T","zw","متى يأذن القاضي عند عضل الولي؟","البكر التي بلغت 16 سنة شمسية","إذا كان عضل الولي بلا سبب مشروع، والزوج كفؤ، ويشترط ألا يقل المهر عن مهر المثل.","18، 20","عضل منع الولي"],
+["T","zw","متى لا تشترط موافقة الولي؟","الثيب العاقلة المتجاوزة 18 سنة","لا تشترط موافقة الولي في زواج المرأة الثيب العاقلة المتجاوزة من العمر ثماني عشرة سنة.","19","ثيب مطلقة ارملة ولي"],
+["S","zw","ما هي الكفاءة؟","في التدين والمال","كفاءة المال أن يكون الزوج قادرًا على المهر المعجل ونفقة الزوجة. وتراعى عند العقد فقط.","21","كفاءة كفء"],
+["T","zw","متى يسقط حق فسخ العقد لعدم الكفاءة؟","مرور 3 أشهر على علم الولي","أو إذا حملت الزوجة أو سبق الرضا.","23","كفاءة فسخ"],
+["N","ns","كم رضعة تُحرّم؟","5 رضعات متفرقات في العامين الأولين","يترك الرضيع الرضاعة في كل منها من تلقاء نفسه، قلّ مقدارها أو كثر.","27/ب","رضاع رضاعة اخوة الرضاع"],
+["S","zw","ما الشروط الصحيحة التي تشترطها الزوجة؟","أي شرط نافع مسجل في الوثيقة","مثل ألا يخرجها من بلدها، ألا يتزوج عليها، أن يسكنها في بلد معين، ألا يمنعها من العمل، أو أن تكون العصمة بيدها. فإن لم يف به فُسخ العقد بطلبها ولها سائر حقوقها.","37/أ","شرط العصمة العمل عقد"],
+["H","zw","أنواع الزواج","صحيح، فاسد، باطل","الباطل لا يرتب أثرًا ولو تم الدخول. الفاسد بعد الدخول يلزم به المهر والعدة ويثبت النسب، ولا إرث ولا نفقة.","29–34","باطل فاسد"],
+["V","mh","كم يستحق من المهر إذا طلقت قبل الدخول؟","نصف المهر المسمى","إذا وقع الطلاق بعد العقد الصحيح وقبل الوطء أو الخلوة الصحيحة. وإن لم يُسمّ مهر فنصف مهر المثل.","44، 46","نصف المهر طلاق قبل الدخول"],
+["V","mh","متى يلزم المهر كاملًا؟","بالوفاة أو الطلاق بعد الخلوة الصحيحة","ولو كانت الوفاة قبل الدخول أو الخلوة.","43","مهر كامل"],
+["H","mh","متى يحل المهر المؤجل؟","بالطلاق أو الوفاة إن لم يُعيَّن أجل","إذا عُيّن أجل فلا يطالَب به قبله ولو وقع الطلاق، والوفاة تُسقط الأجل. والأجل المجهول جهالة فاحشة باطل ويعتبر المهر معجلًا.","42","مؤجل معجل"],
+["H","mh","هل تجبر الزوجة على الجهاز من المهر؟","لا، المهر مالها","وللزوج الانتفاع بالجهاز بإذنها ما دامت الزوجية قائمة.","57","جهاز اثاث"],
+["H","mh","ما الذي تشمله نفقة الزوجة؟","الطعام والكسوة والسكنى والتطبيب","بالقدر المعروف، وخدمة الزوجة التي لأمثالها خدم. وتجب ولو كانت موسرة، من حين العقد الصحيح.","59–60","نفقة الزوجة"],
+["S","mh","متى تستحق الزوجة العاملة النفقة؟","عمل مشروع + موافقة الزوج","موافقة صريحة أو دلالة، ولا يرجع الزوج عنها إلا لسبب مشروع ودون إضرار بها.","61","موظفة عاملة"],
+["H","mh","ما أثر النشوز؟","لا نفقة للناشز ما لم تكن حاملًا","الناشز هي التي تترك بيت الزوجية بلا مسوغ شرعي. ومن المسوغات إيذاء الزوج أو إساءة العشرة أو عدم أمانها على نفسها أو مالها.","62","ناشز نشوز"],
+["T","mh","من متى تُفرض النفقة؟","من تاريخ الطلب (رفع الدعوى)","تسقط نفقة المدة التي سبقت التراضي أو الطلب من القاضي.","64–65","نفقة باثر رجعي"],
+["T","mh","متى تُسمع دعوى زيادة النفقة أو تخفيضها؟","بعد مضي سنة على الحكم بها","إلا إذا حدثت ظروف استثنائية. ويشمل نفقة الزوجة والأقارب.","202","زيادة النفقة تخفيض"],
+["H","mh","من يتحمل نفقات الولادة؟","الزوج","أجرة القابلة والطبيب والعلاج والمستشفى بالقدر المعروف، سواء أكانت الزوجية قائمة أم لا.","70","ولادة مستشفى"],
+["S","mh","شروط المسكن الشرعي","تؤدي فيه مصالحها وتأمن على نفسها ومالها","يهيئه الزوج حسب حاله في محل إقامته أو عمله. وليس له أن يسكن معها أهله دون رضاها، عدا أبنائه غير البالغين وبناته وأبويه الفقيرين بشروط.","72–74","مسكن بيت الزوجية"],
+["H","mh","هل للزوجين ذمة مالية مشتركة؟","لا، لكلٍّ ذمة مالية مستقلة","","320","ذمة مالية راتب"],
+["H","mh","ما هو صندوق تسليف النفقة؟","يسلف النفقة المحكوم بها عند تعذر تحصيلها","ينشأ لدى دائرة قاضي القضاة، ويحل محل المحكوم له في التحصيل من المحكوم عليه.","321","صندوق النفقة"],
+["S","mh","متى تستمر نفقة الأولاد؟","الأنثى حتى تتزوج، والغلام حتى يتكسب أمثاله","الأنثى غير الموسرة بمالها أو كسبها. ونفقة الولد على أبيه لا يشاركه فيها أحد إلا إن كان عاجزًا.","187، 195","نفقة الاولاد البنت الابن"],
+["T","mh","إلى متى نفقة تعليم الأولاد؟","حتى أول شهادة جامعية","يلزم الأب الموسر بنفقة التعليم في جميع المراحل بما فيها السنة التمهيدية، بشرط أن يكون الولد أهلًا للتعلم.","190","تعليم جامعة مدارس خاصة"],
+["N","tl","كم طلقة يملك الزوج؟","3 طلقات متفرقات","الطلاق المقترن بالعدد لفظًا أو إشارة، والمكرر في مجلس واحد، لا يقع به إلا طلقة واحدة.","82، 89","عدد الطلقات ثلاث"],
+["H","tl","طلاق من لا يقع طلاقه","السكران والمدهوش والمكره والمعتوه والمغمى عليه والنائم","المدهوش من غلب الخلل في أقواله وأفعاله بسبب غضب أو غيره بحيث يخرجه عن عادته.","86","غضب سكران مكره"],
+["H","tl","هل يقع الحلف بالطلاق؟","لا، ما لم يخاطب الزوجة بنية الإيقاع","اليمين بلفظ عليّ الطلاق وعليّ الحرام وأمثالهما لا يقع بها طلاق. ولا يقع الطلاق المضاف للمستقبل ولا المعلق المقصود به الحمل على فعل أو ترك.","87، 90","يمين حلف علي الطلاق"],
+["H","tl","متى يكون الطلاق بائنًا؟","المكمل للثلاث، قبل الدخول، على مال، أو بنص","كل طلاق يقع رجعيًا إلا هذه الحالات. والتفويض بالطلاق يقع بائنًا.","91، 85","بائن رجعي"],
+["T","tl","متى يجب تسجيل الطلاق؟","خلال شهر إن وقع خارج المحكمة","وتبلغ المحكمة الطلاق الغيابي والرجعة للزوجة خلال أسبوع من تسجيله.","97","تسجيل الطلاق توثيق"],
+["T","tl","أقل مدة تُصدَّق فيها المرأة بانقضاء عدتها بالحيض","60 يومًا من الطلاق","عند النزاع في الرجعة تصدق بيمينها، ولا يقبل منها ذلك قبل ستين يومًا.","100","انقضاء العدة رجعة"],
+["T","tl","دعوى الرجعة بعد زواج المطلقة من غيره","لا تُسمع بمضي 90 يومًا على الطلاق","ما لم تكن الرجعة مسجلة رسميًا.","101","رجعة مراجعة"],
+["H","tl","ما هو الخلع الرضائي؟","طلاق على عوض يتراضى عليه الزوجان","يقع بائنًا. وإذا لم يسميا شيئًا برئ كل منهما من حقوق المهر والنفقة الزوجية، ونفقة العدة لا تسقط إلا بالنص صراحة.","102، 107، 109، 113","خلع مخالعة مبارأة"],
+["H","tl","هل يسقط حق الحضانة في الخلع؟","لا، يبطل الشرط ويصح الخلع","إذا اشترط الرجل إمساك الولد مدة الحضانة صح الخلع وبطل الشرط.","111","خلع حضانة"],
+["T","tf","الافتداء (الخلع القضائي): مدة الحكمين","30 يومًا","قبل الدخول: تودع ما قبضته من مهر وهدايا ونفقات الزواج. بعد الدخول: تقر ببغضها للحياة معه، وتتنازل عن حقوقها الزوجية وترد المهر المستلم. والفرقة فسخ.","114","افتداء خلع قضائي"],
+["T","tf","التفريق لعدم الإنفاق مع الإعسار","مهلة من شهر إلى 3 أشهر","لدفع النفقة المحكوم بها وتقديم كفيل. وإن أثبت اليسار كُلِّف بنفقة 6 أشهر من المتراكم وتقديم كفيل وإلا طُلِّق عليه حالًا.","115–116","عدم الانفاق نفقة اعسار"],
+["T","tf","شرط صحة الرجعة بعد التطليق لعدم الإنفاق","دفع نفقة 3 أشهر وتقديم كفيل","يقع التطليق رجعيًا بعد الدخول، ولا تصح الرجعة إلا بدفع نفقة ثلاثة أشهر من المتراكم وكفيل بالنفقة المستقبلية.","118","رجعة نفقة"],
+["T","tf","كم مدة الغياب للتفريق؟","سنة فأكثر","ولو كان له مال تنفق منه، إذا تضررت. ويضرب له القاضي أجلًا إن أمكن وصول الرسائل إليه، والفرقة فسخ.","119–121","غياب سفر الزوج"],
+["T","tf","التفريق للهجر","هجر سنة فأكثر، ومهلة لا تقل عن شهر","هجر الزوج وامتناعه عن قربانها في بيت الزوجية، ويمهله القاضي ليفيء أو يطلق.","122","هجر"],
+["T","tf","التفريق للإيلاء","4 أشهر، وأجل الفيء لا يزيد على شهر","إذا حلف على ترك وطئها أربعة أشهر فأكثر واستمر، طلق عليه القاضي طلقة رجعية.","123","ايلاء"],
+["T","tf","التفريق للظهار","إنذار بالتكفير خلال 4 أشهر","فإن امتنع لغير عذر طلق عليه القاضي طلقة رجعية.","124","ظهار كفارة"],
+["T","tf","التفريق لحبس الزوج","حكم 3 سنوات فأكثر، وبعد مضي سنة من حبسه","حكم قطعي بعقوبة مقيدة للحرية، ولو كان له مال. ويرد الطلب إذا أُفرج عنه قبل الحكم. والفرقة فسخ.","125","سجن حبس الزوج"],
+["T","tf","التفريق للشقاق والنزاع","تأجيل لا يقل عن شهر ثم الإحالة لحكمين","لأي من الزوجين بادعاء ضرر حسي أو معنوي. يثبت بشهادة رجلين أو رجل وامرأتين ويكفي التسامع. الحكم يتضمن طلاقًا بائنًا.","126–127","شقاق نزاع ضرر ايذاء"],
+["N","tf","كم عدد الحكمين؟","2، وعند اختلافهما يُضم ثالث","يكون أحدهما من أهل الزوجة والآخر من أهل الزوج إن أمكن، وعند ضم مرجح يؤخذ بقرار الأكثرية.","126/ج، ح","حكمين تحكيم"],
+["V","tf","العوض عند التفريق للشقاق","لا يزيد على المهر وتوابعه","إساءة الزوجة: عوض يقدره الحكمان. إساءة الزوج: طلقة بائنة وتطالبه بغير المقبوض من المهر ونفقة العدة. إساءة مشتركة: على قسم من المهر بنسبة الإساءة.","126/هـ، و","شقاق عوض"],
+["T","tf","مهلة العيب القابل للزوال كالعنة","سنة","من يوم تسليمها نفسها أو من برء الزوج. وكذلك الأمراض المرجو شفاؤها والجنون القابل للزوال يؤجل سنة. والعيب غير القابل للزوال يفرق فيه حالًا.","130، 131، 135","عيوب عنة مرض جنون"],
+["T","tf","التفريق لعقم الزوج","بعد 5 سنوات من الدخول، ولم تتجاوز 45 سنة","للزوجة القادرة على الإنجاب التي ليس لها ولد، بتقرير طبي مؤيد بالشهادة.","136","عقم انجاب اطفال"],
+["T","tf","العجز عن دفع المهر المعجل قبل الدخول","مهلة شهر","فإن لم يدفع يفسخ الزواج، وإن كان غائبًا مجهول الإقامة بلا مال يُفسخ دون إمهال.","139","مهر معجل عجز"],
+["T","tf","إباء الإسلام","مهلة 90 يومًا","من تاريخ عرض الإسلام على من أبى إذا كان عاقلًا.","140/د","اسلام اباء"],
+["T","tf","فسخ زواج زوجة المفقود","4 سنوات، أو سنة في الحرب والكوارث","4 سنوات من الفقد في حالة الأمن، ومدة لا تقل عن سنة إذا فُقد في حال يغلب فيها الهلاك كمعركة أو غارة أو زلزال.","143","مفقود"],
+["T","id","عدة المتوفى عنها زوجها","4 أشهر و10 أيام","لغير الحامل، دخل بها أم لم يدخل. وتعتد في بيت الزوجية ولها الخروج لحاجتها ولا تبيت خارجه.","146، 150","عدة الوفاة الارملة"],
+["T","id","عدة المطلقة التي تحيض","3 حيضات كوامل","لغير الحامل لأي سبب غير الوفاة.","147/أ","عدة الطلاق حيض"],
+["T","id","عدة من لا تحيض أو الآيسة","3 أشهر","فإن جاءها الحيض قبل انقضائها استأنفت بثلاث حيضات.","147/ب","ياس انقطاع"],
+["T","id","عدة ممتدة الطهر","9 أشهر تتمة للسنة","من رأت الحيض مرة أو مرتين ثم انقطع.","147/ج","ممتدة الطهر"],
+["T","id","عدة الحامل","وضع الحمل","أو إسقاطه مستبين الخلقة كلها أو بعضها، من أي فرقة.","148","حامل حمل"],
+["H","id","وفاة الزوج أثناء العدة الرجعية","تنتقل إلى عدة الوفاة","","149","وفاة في العدة"],
+["T","id","حد مدة نفقة العدة","لا تزيد العدة على سنة","ولا تسمع دعوى نفقة العدة بعد مرور سنة على تبليغ الزوجة الطلاق.","152","نفقة العدة"],
+["T","id","متى يجوز عقد زواج المعتدة؟","بعد 90 يومًا على موجب العدة","يمنع العقد على المعتدة من طلاق أو فسخ قبل مضي تسعين يومًا ولو كانت عدتها منقضية، إلا من اعتدت منه.","36/و","زواج بعد الطلاق"],
+["H","id","هل للأرملة نفقة عدة؟","لا، ولها السكنى","لها السكنى في بيت الزوجية مدة العدة إذا كان مسكنًا للميت بملك أو منفعة مؤبدة أو أجرة مدفوعة.","154","ارملة نفقة"],
+["V","tl","التعويض عن الطلاق التعسفي","من نفقة سنة إلى نفقة 3 سنوات","كأن طلقها لغير سبب معقول. يُدفع جملة إن كان موسرًا وأقساطًا إن كان معسرًا، ولا يؤثر على حقوقها الأخرى.","155","تعسفي تعويض"],
+["T","ns","أقل وأكثر مدة الحمل","6 أشهر أقلها، وسنة أكثرها","","156","مدة الحمل"],
+["H","ns","بم يثبت النسب للأب؟","الفراش، الإقرار، البينة","وللمحكمة إثباته بالوسائل العلمية القطعية. ولا يثبت النسب بالتبني.","157، 162","نسب DNA بصمة وراثية تبني"],
+["T","ns","نسب ولد المطلقة أو المتوفى عنها","يثبت إن ولد خلال سنة","ولا تسمع عند الإنكار دعوى النسب لولد أتت به لأكثر من سنة من الطلاق أو الوفاة.","157/هـ، 159","نسب مطلقة"],
+["S","ns","شروط الإقرار بالنسب","5 شروط","المقر له حي مجهول النسب، لا يكذبه ظاهر الحال، المقر بالغ عاقل، فارق السن يحتمل الإقرار، ويصدقه المقر له البالغ.","160","اقرار نسب"],
+["T","ns","متى يمتنع اللعان لنفي النسب؟","بعد 60 يومًا من العلم بالولادة","أو إذا اعترف بالنسب، أو ثبت بالوسائل العلمية أن الولد له.","163/ج","لعان نفي النسب"],
+["N","ns","صيغة اللعان","4 أيمان والخامسة","يقسم الرجل أربع أيمان والخامسة اللعنة، وتقسم المرأة أربع أيمان والخامسة الغضب. ويترتب عليه فسخ العقد.","164–165","لعان"],
+["T","ns","مدة أجرة الرضاع","حتى يكمل الولد سنتين","لا تستحق الأم أجرة الرضاع حال الزوجية أو عدة الرجعي، وتستحقها في عدة البائن وبعدها.","168–169","رضاعة اجرة"],
+["T","hd","إلى متى حضانة الأم؟","حتى يتم المحضون 15 سنة","ولغير الأم إلى إتمام 10 سنوات. وبعد ذلك يُخيَّر المحضون في البقاء مع الأم حتى سن الرشد. وتمتد إذا كان مريضًا يحتاج رعاية النساء.","173","سن الحضانة انتهاء الحضانة تخيير"],
+["H","hd","ترتيب مستحقي الحضانة","الأم، ثم أمها، ثم أم الأب، ثم الأب","ثم للمحكمة أن تسندها لأحد الأقارب الأكثر أهلية لصالح المحضون.","170","ترتيب الحضانة جدة"],
+["S","hd","شروط الحاضن","بالغ عاقل أمين قادر سليم من الأمراض المعدية الخطيرة","ألا يضيع المحضون لانشغاله، ولا يسكنه مع مبغضيه، وألا يكون مرتدًا. والحاضنة ألا تكون متزوجة بغير محرم من الصغير. ويشترط أن يكون ذا رحم محرم عند اختلاف الجنس.","171","شروط الحاضنة زواج الام"],
+["S","hd","متى تسقط الحضانة؟","حالتان","إذا اختل أحد شروط الحاضن، أو إذا سكن الحاضن الجديد مع من سقطت حضانته بسبب سلوكه أو ردته أو مرضه المعدي. ويعود الحق بزوال السبب.","172، 174","سقوط الحضانة"],
+["T","hd","مبيت المحضون عند الأب أو الأم","5 ليالٍ في الشهر لمن بلغ 7 سنوات","متصلة أو متفرقة، إذا كانت الإقامة داخل المملكة.","181/أ","مبيت"],
+["T","hd","الرؤية والاستزارة والاصطحاب","مرة في الأسبوع لمن دون 7 سنوات","مع الاتصال عبر الوسائل الحديثة. وللجد لأب عند عدم وجود الأب. وللأجداد والجدات الرؤية مرة في الشهر.","181/أ","مشاهدة رؤية استزارة اصطحاب"],
+["T","hd","الرؤية إذا كان المحضون خارج المملكة","مرة في السنة على الأقل","تحدد المحكمة المكان والزمان والكيفية بما يراعي سن المحضون ومصلحته.","181/ب","سفر خارج الاردن رؤية"],
+["T","hd","امتناع الحاضن عن تنفيذ حكم الرؤية","إسقاط مؤقت لا يزيد على سنة","إذا تكرر امتناعه دون عذر بعد إنذار رئيس التنفيذ. وتخلف المحكوم له المتكرر يوقف التنفيذ مدة لا تزيد على 3 أشهر.","183","امتناع الحاضن تنفيذ"],
+["S","hd","السفر بالمحضون خارج المملكة","موافقة الولي، أو إذن القاضي بضمانات","المحضون الأردني لا يقيم خارج المملكة إلا بموافقة الولي. وللسفر المؤقت يأذن القاضي بكفالة قريب حتى الدرجة الرابعة مع منع سفر الكفيل.","176–177","سفر المحضون"],
+["T","hd","إلى متى أجرة الحضانة؟","حتى يتم المحضون 15 سنة","من تاريخ الطلب، بأجرة المثل دون أن تزيد على قدرة المنفق. ولا تستحقها الأم حال الزوجية أو في عدة الرجعي. ولها أجرة مسكن الحضانة.","178–179","اجرة الحضانة مسكن"],
+["T","hd","ضم الأنثى للولي","دون الثلاثين وغير مأمونة على نفسها","ما لم يقصد بالضم الكيد والإضرار بها.","185","ضم"],
+["T","ah","سن الرشد","18 سنة شمسية كاملة","كل من بلغها متمتعًا بقواه العقلية ولم يحجر عليه كامل الأهلية.","203","سن الرشد"],
+["T","ah","سن التمييز","7 سنوات كاملة","من لم يكمل السابعة فاقد التمييز وتصرفاته باطلة. والمميز تصح تصرفاته النافعة نفعًا محضًا.","204، 209–210","مميز تمييز"],
+["T","ah","امتحان الصغير المميز بالمال","من أكمل 15 سنة شمسية","يسلمه الولي بترخيص المحكمة مقدارًا من ماله ويأذن له بالتجارة. ومن أكمل 15 ولم يتم 18 يتسلم نفقته المحكوم بها.","216، 220","اذن بالتجارة"],
+["T","ah","دعوى الحجر على من شارف 18","قبل 6 أشهر من بلوغه 18","إذا كان به عارض من عوارض الأهلية، فتحكم المحكمة باستمرار الولاية أو الوصاية.","221","حجر"],
+["H","ah","ترتيب الولاية على الصغير","الأب، وصيه، الجد، وصيه، المحكمة","ولا ولاية لغير المسلم على المسلم.","223–224","ولي القاصر ولاية"],
+["T","ah","غياب الولي","أكثر من 6 أشهر: وصي مؤقت","لتسيير المصالح الضرورية للقاصر.","225/ج","غياب الولي"],
+["T","ah","التزامات الوصي الزمنية","إيجار ≤ 3 سنوات، تقرير كل 6 أشهر، تسليم خلال 30 يومًا","الإيجار الذي لا يزيد على 3 سنوات من أعمال الإدارة. يقدم تقريرًا كل ستة أشهر على الأقل، ويسلم الأموال خلال ثلاثين يومًا من انتهاء مهمته.","236، 239، 243","وصي وصاية"],
+["S","ah","شروط الوصي","كمال الأهلية والقدرة وحسن السيرة","ألا يكون محكومًا بجريمة مخلة بالآداب أو الشرف، ولا مفلسًا، ولا سبق عزله، ولا بينه وبين القاصر نزاع قضائي.","231","وصي شروط"],
+["T","ah","الغائب والمفقود","الغائب: سنة فأكثر · الحكم بموت المفقود: 4 سنوات أو سنة في الكوارث","تعتد زوجته عدة الوفاة من تاريخ الحكم، وتقسم تركته بين ورثته الموجودين وقت الحكم.","245، 249، 252","مفقود غائب"],
+["V","ws","الحد الأقصى للوصية","ثلث التركة لغير الوارث","ما زاد لا ينفذ إلا بإجازة الورثة بعد الوفاة. والوصية للوارث لا تنفذ إلا بإجازتهم. وتصح مع اختلاف الدين أو الجنسية.","274","ثلث وصية"],
+["S","ws","الوصية الواجبة","لأولاد الابن المتوفى قبل أبيه أو معه","بمقدار حصة أبيهم لو كان حيًّا، بما لا يتجاوز الثلث، للذكر مثل حظ الأنثيين. لا يستحقونها إن كانوا وارثين أو أعطاهم الجد في حياته مقدارها.","279","وصية واجبة احفاد"],
+["H","ws","الرجوع عن الوصية","جائز بشرط أن يكون صريحًا ومسجلًا رسميًا","ولا تسمع عند الإنكار دعوى الوصية أو الرجوع عنها بعد الوفاة إلا بأوراق رسمية.","258، 268","رجوع"],
+["T","ws","مهلة الموصى له للقبول أو الرد","أجل لا يقل عن شهر","فإن لم يجب ولا عذر له يُعدّ رادًا للوصية حكمًا.","261","قبول الوصية"],
+["T","ws","الوصية للحمل","أن يولد لسنة فأقل من وقت الوصية","","276","حمل"],
+["S","ir","موانع الإرث","القتل العمد العدوان واختلاف الدين","القاتل عاقلًا بالغًا، فاعلًا أو شريكًا أو متسببًا. ولا يرث غير المسلم المسلم، ويرث المسلم المرتد.","281","موانع الارث قتل"],
+["N","ir","عدد أصحاب الفروض","12: أربعة ذكور وثمان إناث","الذكور: الأب، الجد لأب، الزوج، الأخ لأم. الإناث: الأم، الزوجة، البنت، بنت الابن، الأخت الشقيقة، الأخت لأب، الأخت لأم، الجدة.","285","فروض"],
+["V","ir","ميراث الزوجة","الربع أو الثمن","الربع إن لم يكن للزوج فرع وارث، والثمن إن كان له فرع وارث.","289","زوجة ربع ثمن"],
+["V","ir","ميراث الزوج","النصف أو الربع","النصف إن لم يكن لزوجته فرع وارث، والربع إن كان.","288","زوج نصف"],
+["V","ir","ميراث البنت","النصف، والثلثان لاثنتين فأكثر","ومع الابن تعصيبًا للذكر مثل حظ الأنثيين.","292","بنت بنات"],
+["N","ir","أنواع العصبة","3: بالنفس، بالغير، مع الغير","جهات العصبة بالنفس مرتبة: البنوة، الأبوة، الأخوة، العمومة.","297","عصبة تعصيب"],
+["N","ir","أصناف ذوي الأرحام","4 أصناف","لا يرثون إلا عند عدم أصحاب الفروض والعصبات، وذكورهم وإناثهم في القسمة سواء.","301، 310","ذوي الارحام"],
+["H","ir","تركة من لا وارث له","تؤول إلى وزارة الأوقاف","","284","لا وارث"],
+["V","ij","غرامة عدم توثيق عقد الزواج","200 دينار لكل واحد","يعاقب العاقد والزوجان والشهود بعقوبة قانون العقوبات وغرامة مائتي دينار، والمأذون الذي لا يسجل العقد يعزل من وظيفته.","36/ج، د","توثيق عقد خارج المحكمة غرامة"],
+["H","ij","عقوبة عدم تسجيل الطلاق","العقوبة الواردة في قانون العقوبات","حسب الشرح المرفق بالنص: الحبس حتى شهر أو غرامة من 30 إلى 100 دينار (م 281 عقوبات).","97","عقوبة الطلاق"],
+["H","ij","توثيق الزواج خارج المملكة","القناصل الأردنيون المسلمون","يوثقون العقود ويسمعون تقارير الطلاق ويرسلون نسخة لدائرة قاضي القضاة.","36/ز","سفارة قنصل"],
+["T","ij","السنة في القانون","قمرية ما لم يُنص على غير ذلك","لذلك نصت المواد على 'سنة شمسية' في الأعمار صراحة.","322","سنة قمرية شمسية"]
+];
+
+const FIRQA=[
+["طلاق الزوج العادي","رجعي","العدة",'91',"r"],
+["الطلقة الثالثة المكملة","بائن بينونة كبرى","لا تحل حتى تنكح زوجًا غيره",'94–95',"b"],
+["الطلاق قبل الدخول","بائن","لا عدة",'91',"b"],
+["الخلع والطلاق على مال","بائن","",'113',"b"],
+["طلاق الزوجة نفسها بالتفويض أو العصمة","بائن","",'85، 38',"b"],
+["الافتداء (قبل الدخول وبعده)","فسخ","حكمان 30 يومًا",'114',"f"],
+["عدم الإنفاق بعد الدخول","رجعي","مهلة 1–3 أشهر",'118',"r"],
+["الإيلاء والظهار","رجعي","4 أشهر",'123–124',"r"],
+["الشقاق والنزاع","بائن","تأجيل لا يقل عن شهر",'127',"b"],
+["الغياب والهجر","فسخ","سنة فأكثر",'119–122',"f"],
+["حبس الزوج","فسخ","حكم 3 سنوات + مضي سنة",'125',"f"],
+["العيوب والأمراض والعقم","فسخ","سنة / 5 سنوات للعقم",'130–138',"f"],
+["العجز عن المهر المعجل","فسخ","مهلة شهر",'139',"f"],
+["الفقد","فسخ","4 سنوات / سنة",'143',"f"],
+["اللعان","فسخ","",'165',"f"]
+];
+const IRTH=[
+["الأب","السدس / السدس والباقي / التعصيب","مع ابن / مع بنت / بلا ولد","286"],
+["الأم","السدس / ثلث الكل / ثلث الباقي","مع ولد أو اثنين من الإخوة / عند عدمهم / مع الأب وأحد الزوجين","287"],
+["الزوج","النصف / الربع","بلا فرع وارث / مع فرع وارث","288"],
+["الزوجة أو الزوجات","الربع / الثمن","بلا فرع وارث / مع فرع وارث","289"],
+["الجد لأب","كالأب، ولا ينقص عن السدس","يحجب بالأب، ويقاسم الإخوة","290"],
+["الجدة","السدس","تحجب بالأم","291"],
+["البنت","النصف / الثلثان / تعصيب","واحدة / اثنتان فأكثر / مع الابن","292"],
+["بنت الابن","النصف / الثلثان / السدس","السدس تكملة للثلثين مع بنت صلبية","293"],
+["الأخت الشقيقة","النصف / الثلثان / تعصيب","تحجب بالأب والابن وابن الابن","294"],
+["الأخت لأب","النصف / الثلثان / السدس","السدس مع الشقيقة الواحدة","295"],
+["الإخوة لأم","السدس / الثلث","واحد / اثنان فأكثر بالتساوي","296"]
+];
+const TL=[["عدة الوفاة",4.33,"4 أشهر و10 أيام"],["عدة غير الحائض",3,"3 أشهر"],["ممتدة الطهر (تتمة السنة)",12,"سنة"],["أقل الحمل",6,"6 أشهر"],["أكثر الحمل",12,"سنة"],["منع عقد المعتدة",3,"90 يومًا"],["الغياب / الهجر",12,"سنة"],["الإيلاء",4,"4 أشهر"],["مهلة العنة",12,"سنة"],["فقد في كارثة",12,"سنة"],["فقد في الأمن",48,"4 سنوات"],["عقم الزوج",60,"5 سنوات"]];
+
+// ---------- قاموس المصطلحات: [المصطلح، التفسير، المادة، كلمات تُربط تلقائيًا داخل البطاقات] ----------
+const GL=[
+["الإيجاب والقبول","لفظا عقد الزواج: يعرض أحد الطرفين الزواج (الإيجاب) ويوافق الآخر (القبول) في مجلس واحد.","6–7",["الإيجاب","القبول"]],
+["الآيسة","المرأة التي انقطع حيضها لكبر السن، وتسمى المرحلة سن الإياس. عدتها 3 أشهر.","147",["الآيسة","سن الإياس"]],
+["الإعذار","إنذار القاضي للزوج الغائب وإمهاله أجلًا قبل الحكم عليه.","117، 120",["أعذر","إعذار"]],
+["الإقرار","اعتراف الشخص بحق لغيره، كاعتراف الأب بأن الولد ابنه.","160",["الإقرار","باإلقرار","بالإقرار"]],
+["الإيلاء","أن يحلف الزوج ألا يعاشر زوجته أربعة أشهر فأكثر، فإن استمر طلّق عليه القاضي.","123",["الإيلاء","للإيلاء"]],
+["الافتداء","أن تطلب الزوجة من المحكمة التفريق وتتنازل عن حقوقها وترد المهر، ولو لم يرض الزوج. يقع فسخًا. يسميه الناس «الخلع القضائي».","114",["الافتداء"]],
+["الأهلية","صلاحية الشخص لاكتساب الحقوق ومباشرة التصرفات بنفسه، وتكتمل ببلوغ 18 سنة مع سلامة العقل.","203",["الأهلية","أهلية"]],
+["البائن (بينونة صغرى)","طلاق ينهي الزواج فورًا بطلقة أو طلقتين، ويجوز أن يعودا بعقد ومهر جديدين.","93",["بائن","بائنًا","البائن","بائنة"]],
+["البينونة الكبرى","الطلقة الثالثة. لا تحل المرأة لمطلقها حتى تتزوج غيره زواجًا صحيحًا ويدخل بها.","94–95",["بينونة كبرى","البينونة الكبرى"]],
+["البكر","المرأة التي لم يسبق لها زواج ودخول.","18",["البكر"]],
+["البيّنة","الدليل الذي تثبت به الدعوى، كالشهود والوثائق.","157",["البينة","بالبينة"]],
+["التبني","نسبة ولد إلى غير أبيه الحقيقي. لا يثبت به نسب في القانون.","162",["التبني","بالتبني"]],
+["التخارج","اتفاق الورثة على خروج أحدهم من الميراث مقابل مبلغ أو شيء معلوم.","314",["التخارج"]],
+["التركة","كل ما يتركه الميت من أموال وحقوق.","",["التركة"]],
+["التسامع","أن يشهد الشاهد بما اشتهر بين الناس دون أن يراه أو يسمعه مباشرة.","127",["التسامع"]],
+["التعصيب","أخذ الوارث ما بقي من التركة بعد أصحاب الفروض، أو التركة كلها إن انفرد.","298",["تعصيب","تعصيبًا","التعصيب"]],
+["التفويض (العصمة)","أن يجعل الزوج حق الطلاق بيد زوجته، فتطلق نفسها أمام القاضي ويقع بائنًا.","38، 85",["العصمة","بالتفويض","التفويض"]],
+["التمييز","قدرة الصغير على فهم التصرفات، وتبدأ ببلوغ 7 سنوات كاملة.","210",["التمييز","المميز"]],
+["التنجيز","أن يكون العقد نافذًا في الحال، فلا يصح الزواج المعلق على شرط أو المضاف للمستقبل.","9",["التنجيز"]],
+["الثيب","المرأة التي سبق لها الزواج والدخول.","19",["الثيب"]],
+["الجب والخصاء","الجب: قطع العضو الذكري. الخصاء: نزع الخصيتين. وهما من العيوب المانعة للمعاشرة.","128",[]],
+["الجهاز","ما تحضره الزوجة إلى بيت الزوجية من أثاث وأمتعة، وهو ملكها.","57",["الجهاز"]],
+["الحباء","ما يأخذه أهل الزوجة من الزوج مقابل تزويجها. ممنوع، وللزوج استرداده.","54",["الحباء"]],
+["الحجب","حرمان وارث من الميراث كله أو بعضه لوجود وارث أقرب منه.","311",["يحجب","تحجب","يحجبن","يُحجب","الحجب"]],
+["الحجر","منع الشخص من التصرف في أمواله بحكم القانون (كالصغير) أو بقرار المحكمة (كالسفيه).","211",["الحجر","حجر"]],
+["الحضانة","حفظ الصغير ورعايته وتربيته. الحاضن: من بيده الطفل. المحضون: الطفل نفسه.","170",["الحضانة","حضانة"]],
+["الحكمان","شخصان عدلان يعينهما القاضي، أحدهما من أهل الزوج والآخر من أهل الزوجة، يحاولان الصلح ثم يقرران التفريق وعوضه.","126",["الحكمان","حكمين","الحكمين"]],
+["الحيضة الكاملة","دورة حيض تامة من بدايتها إلى نهايتها. عدة المطلقة ثلاث منها.","147",["حيضات","الحيض"]],
+["الخلع","طلاق يتراضى عليه الزوجان مقابل عوض تدفعه الزوجة. يقع بائنًا.","102، 113",["الخلع","خلع"]],
+["الخلوة الصحيحة","اجتماع الزوجين منفردين في مكان آمن دون مانع من المعاشرة. تأخذ حكم الدخول في المهر والعدة.","43",["الخلوة الصحيحة","الخلوة"]],
+["الدخول","المعاشرة الزوجية الفعلية بعد العقد.","",["الدخول","دخل بها"]],
+["ذو رحم محرم","قريب لا يجوز الزواج منه أبدًا، كالأخ والعم والخال والجد.","171",["ذا رحم محرم","محرم"]],
+["ذو الغفلة","من لا يحسن التصرفات النافعة فيُغبن في المعاملات لسذاجته.","206",["ذو الغفلة","للغفلة","الغفلة"]],
+["ذوو الأرحام","أقارب لا يرثون بفرض ولا تعصيب، كأولاد البنات والخال والعمة. يرثون عند عدم غيرهم.","301",["ذوي الأرحام","ذوو الأرحام"]],
+["الرتق والقرن","انسداد خِلقي عند المرأة يمنع المعاشرة الزوجية.","128",["الرتق","والقرن"]],
+["الرجعة","إعادة الزوج مطلقته رجعيًا إلى عصمته خلال العدة بالقول أو الفعل، دون عقد جديد ودون رضاها.","98",["الرجعة","رجعة","مراجعة"]],
+["الرد","إعادة ما بقي من التركة على أصحاب الفروض بنسبة سهامهم إذا لم يوجد عاصب.","312",[]],
+["الرشد (سن الرشد)","18 سنة شمسية كاملة، يصبح بها الشخص كامل الأهلية.","203",["سن الرشد","الرشد"]],
+["الزواج الباطل","عقد على من تحرم تحريمًا مؤبدًا أو على زوجة الغير، أو زواج المسلمة بغير المسلم. لا يرتب أي أثر.","30، 33",["الباطل"]],
+["الزواج الفاسد","عقد اختل فيه شرط صحة كغياب الشهود. قبل الدخول لا أثر له، وبعده يلزم المهر والعدة ويثبت النسب.","31، 34",["الفاسد"]],
+["السفيه","من يبذر ماله وينفقه في غير موضعه.","206",["السفيه","لسفه","السفه"]],
+["السنة القمرية","السنة الهجرية (حوالي 354 يومًا). هي المقصودة في القانون إلا إذا قيل «شمسية».","322",["قمرية"]],
+["السنة الشمسية","السنة الميلادية (365 يومًا). تستعمل في الأعمار كسن الزواج والرشد.","",["شمسية"]],
+["الشقاق والنزاع","الخلاف والضرر بين الزوجين الذي يجعل استمرار الحياة الزوجية متعذرًا.","126",["الشقاق"]],
+["الشقيق","الأخ أو الأخت من الأب والأم معًا. والأخ لأب: من الأب فقط. والأخ لأم: من الأم فقط.","",["الشقيقة","الشقيقات","الأشقاء"]],
+["الضم","انتقال الأنثى إلى بيت وليها المحرم لحمايتها.","185",["ضم"]],
+["الطلاق الرجعي","طلاق لا ينهي الزواج في الحال، وللزوج أن يرجع زوجته خلال العدة. تبين منه بانتهاء العدة.","92",["رجعي","رجعيًا","رجعية","الرجعي"]],
+["الطلاق التعسفي","طلاق الزوج زوجته دون سبب معقول، فتستحق تعويضًا.","155",["تعسفي","التعسفي","تعسفًا"]],
+["الظهار","أن يشبّه الزوج زوجته بمن تحرم عليه كأمه، فتحرم عليه حتى يؤدي الكفارة.","124",["الظهار","للظهار"]],
+["العدة","مدة انتظار تلزم المرأة بعد الطلاق أو الفسخ أو الوفاة، لا يجوز لها الزواج خلالها.","145",["العدة","عدة","المعتدة"]],
+["العصبة","الورثة الذين يأخذون الباقي من التركة. العصبة بنفسه: قريب ذكر لا تتوسط بينه وبين الميت أنثى كالابن والأخ والعم.","297",["العصبة","عاصب","العاصب","العصبات"]],
+["العضل","منع الولي المرأة من الزواج بكفء دون سبب مشروع.","18",["عضل","العضل"]],
+["العنة","عجز الرجل عن المعاشرة الزوجية. يمهل القاضي الزوج سنة لعلاجها.","128، 130",["العنة"]],
+["العول","إنقاص أنصبة أصحاب الفروض بالنسبة إذا زاد مجموع فروضهم على التركة.","313",["العول"]],
+["الغائب","من لا يعرف موطنه وتعطلت مصالحه المالية سنة فأكثر، وصدر حكم بذلك.","245",["الغائب","غائبًا"]],
+["الغبن اليسير","نقص بسيط في الثمن عن القيمة الحقيقية يتسامح فيه الناس.","227",["بغبن يسير"]],
+["الفراش","قيام الزوجية. الولد المولود في زواج قائم بعد ستة أشهر من العقد يُنسب للزوج.","157–158",["الفراش","بفراش"]],
+["الفرع الوارث","أولاد الميت وأولاد أبنائه الذين يرثون.","288",["فرع وارث"]],
+["الفسخ","نقض عقد الزواج من أصله بحكم القاضي. لا يحسب من عدد الطلقات الثلاث.","",["فسخ","فسخًا","بفسخ"]],
+["الفيء","رجوع الزوج إلى معاشرة زوجته بعد الإيلاء أو الهجر.","123",["الفيء","ليفيء","يفيء"]],
+["القيّم","من تعينه المحكمة لإدارة أموال الغائب أو المفقود.","247",["قيمًا"]],
+["الكتابية","المرأة من أهل الكتاب: اليهودية أو المسيحية. يجوز للمسلم الزواج بها.","28",["كتابية","الكتابية"]],
+["الكفاءة","مساواة الرجل للمرأة في التدين والقدرة المالية على المهر المعجل والنفقة. حق للمرأة ووليها.","21",["الكفاءة","كفاءة","كفؤ","الكفء","كفؤا"]],
+["الكفيل","شخص يضمن التزام غيره، كدفع النفقة أو إعادة المحضون من السفر.","177",["كفيل","كفالة"]],
+["اللعان","أيمان متبادلة بين الزوجين أمام القاضي عندما يتهم الزوج زوجته أو ينفي نسب ولدها. يفسخ به الزواج.","164–165",["اللعان","لعان"]],
+["المأذون","الموظف المرخص من المحكمة الشرعية لتوثيق عقود الزواج.","36",["المأذون","مأذون"]],
+["المبارأة","صورة من الخلع يبرئ فيها كل من الزوجين الآخر من حقوقه المالية.","102",["المبارأة"]],
+["المدهوش","من اضطربت أقواله وأفعاله بسبب غضب أو غيره حتى خرج عن عادته. لا يقع طلاقه.","86",["المدهوش"]],
+["المرتد","من ترك الإسلام بعد أن كان مسلمًا.","142",["مرتدًا","المرتد","الردة","ردة"]],
+["المعتوه","من اختل إدراكه فصار قليل الفهم مختلط الكلام فاسد التدبير.","206",["المعتوه","عته"]],
+["المفقود","من لا تعرف حياته من موته، وصدر حكم بذلك.","246",["المفقود"]],
+["المبيت والاستزارة والاصطحاب","المبيت: بقاء الطفل ليلة عند غير الحاضن. الاستزارة: أخذه لزيارة بيت غير الحاضن. الاصطحاب: الخروج به في نزهة أو مشوار.","181",["المبيت","مبيت","الاستزارة","استزارته","الاصطحاب","اصطحابه"]],
+["المشاهدة (الرؤية)","لقاء الطرف غير الحاضن بالطفل في وقت ومكان يحددهما الاتفاق أو القاضي.","181",["الرؤية","رؤية"]],
+["المهر المسمى","المهر الذي يتفق عليه الطرفان عند العقد.","39",["المسمى"]],
+["مهر المثل","مهر امرأة تماثل الزوجة من قريبات أبيها، فإن لم توجد فمن أهل بلدها.","39",["مهر المثل"]],
+["المهر المعجل والمؤجل","المعجل: ما يُدفع عند العقد أو قبل الزفاف. المؤجل: ما يؤخر إلى أجل أو إلى الطلاق أو الوفاة.","41–42",["المعجل","المؤجل"]],
+["الموسر والمعسر","الموسر: القادر ماليًا. المعسر: العاجز عن الدفع. والإعسار: حالة العجز.","",["موسرًا","معسرًا","الموسر","الإعسار","اليسار","موسرة"]],
+["النشوز","ترك الزوجة بيت الزوجية دون مسوغ شرعي، فتسقط نفقتها. الناشز: الزوجة في هذه الحالة.","62",["النشوز","الناشز","نشزت"]],
+["النكول عن اليمين","امتناع الخصم عن حلف اليمين التي طلبها القاضي.","121",["نكولها"]],
+["الوصي","من يعينه الأب أو الجد أو المحكمة لإدارة أموال القاصر.","230",["الوصي","وصي","وصيًا","الوصاية"]],
+["الوصية الواجبة","نصيب يفرضه القانون لأولاد الابن الذي مات قبل أبيه، بمقدار نصيب أبيهم وفي حدود الثلث.","279",["الوصية الواجبة"]],
+["الوطء بشبهة","معاشرة غير مشروعة وقعت بظن أنها حلال، كعقد فاسد ظنه الطرفان صحيحًا.","145",["بشبهة"]],
+["الولي","القريب الذي يتولى تزويج المرأة، أو رعاية شؤون الصغير. وهو العصبة بنفسه بالترتيب.","14، 223",["الولي","ولي"]],
+["أصحاب الفروض","الورثة الذين حدد الشرع نصيبهم بكسر معلوم كالنصف والربع والسدس. عددهم 12.","285",["أصحاب الفروض"]],
+["حجة","الوثيقة الرسمية التي تصدرها المحكمة الشرعية لإثبات أمر كالإذن بالزواج أو الطلاق.","",["حجة"]],
+["قاضي القضاة","رئيس القضاء الشرعي في الأردن، ويصدر التعليمات المنظمة لعمل المحاكم الشرعية.","10",["قاضي القضاة"]],
+["مستبين الخلقة","الجنين الذي ظهرت بعض أعضائه. إسقاطه ينهي عدة الحامل.","148",["مستبين الخلقة"]],
+["مرض الموت","المرض الذي يغلب فيه الهلاك ويتصل بالموت. تبرعات المريض فيه تعامل كالوصية.","255",["مرض الموت"]],
+["ممتدة الطهر","المرأة التي حاضت مرة أو مرتين ثم انقطع حيضها قبل سن الإياس. عدتها 9 أشهر تتمة للسنة.","147",["ممتدة الطهر"]]
+];
+
+const CH=[[1,28,"الزواج ومقدماته"],[29,38,"أنواع الزواج وأحكامها"],[39,79,"آثار عقد الزواج"],[80,144,"انحلال عقد الزواج"],[145,155,"آثار انحلال الزواج"],[156,202,"حقوق الأولاد والأقارب"],[203,253,"الأهلية والولاية والوصاية"],[254,279,"الوصية"],[280,329,"الإرث"]];
+const CHC=["#0f6b5c","#2f7f8f","#3557a8","#6a4fa3","#8a3f6e","#a8741a","#4f5b2a","#9a5b2b","#2a6b47"];
+const AXC={zw:"#0f8f78",mh:"#c48a1c",tl:"#b04a6b",tf:"#4c63b6",id:"#7b52b8",ns:"#2f8fa8",hd:"#d06a3a",ah:"#5f7a2c",ws:"#8a6a3a",ir:"#2a7d52",ij:"#6b7280"};
+const JOURNEY=[["zw","الخطبة والعقد","من الوعد إلى الشهود والولي"],["mh","المهر والنفقة","حقوق الزوجة بعد العقد"],["tl","الطلاق والخلع","إنهاء الزواج بإرادة الزوج أو باتفاقهما"],["tf","التفريق القضائي","حين تحكم المحكمة بإنهاء الزواج"],["id","العدة","مدة الانتظار بعد الفرقة"],["ns","النسب والرضاع","إثبات نسب الأولاد"],["hd","الحضانة والمشاهدة","من يرعى الأطفال وكيف يراهم الآخر"],["ah","الأهلية والولاية","حماية القاصر وأمواله"],["ws","الوصية","ما يوصي به الإنسان بعد موته"],["ir","الإرث","توزيع التركة على الورثة"]];
+const WALL=[["18","سنة شمسية","سن الزواج وسن الرشد","سن الزواج","--t"],["16","سنة شمسية","الاستثناء بإذن القاضي","دون 18","--t"],["15","سنة","نهاية حضانة الأم","سن الحضانة","--t"],["4·10","أشهر·أيام","عدة الوفاة","عدة الوفاة","--t"],["3","طلقات","يملكها الزوج","كم طلقة","--n"],["4","زوجات","الحد الأقصى","كم زوجة","--n"],["5","رضعات","الرضاع المحرِّم","رضعة","--n"],["12","وارثًا","أصحاب الفروض","أصحاب الفروض","--n"],["⅓","التركة","حد الوصية","الحد الأقصى للوصية","--v"],["1–3","سنوات نفقة","تعويض الطلاق التعسفي","التعسفي","--v"],["200","دينار","غرامة عدم توثيق العقد","غرامة","--v"],["90","يومًا","منع عقد زواج المعتدة","زواج المعتدة","--t"],["7","سنوات","سن التمييز والمبيت","سن التمييز","--t"],["5","ليالٍ شهريًا","مبيت المحضون","مبيت","--t"],["20","سنة","فارق العمر الممنوع","فارق العمر","--t"],["45","سنة","حد عمر الزوجة في دعوى العقم","عقم","--t"]];
+
+const $=s=>document.querySelector(s);
+const norm=s=>(s||"").replace(/[ً-ٰٟـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/ؤ/g,"و").replace(/ئ/g,"ي").toLowerCase();
+const SYN={"خلع":"افتداء","رويه":"مشاهده","مشاهده":"رويه","سجن":"حبس","ارمله":"وفاه","تعدد":"زوجات","عمر":"سن","طفل":"محضون","اطفال":"حضانه"};
+const STOP=new Set(["ما","هي","هو","كم","مده","متى","في","من","عن","على","الى","او","هل","كذا","شروط","شرط","عدد","قيمه","كيف"]);
+const artNum=e=>{const m=String(e[5]).match(/\d+/);const n=m?+m[0]:10;return n>329?10:n};
+let st={type:null,axis:null,ch:null,q:""};
+try{const s=JSON.parse(localStorage.getItem("ahwal-st")||"null");if(s){st.type=s.type;st.axis=s.axis}}catch(e){}
+
+// regex that tolerates diacritics and alef forms
+const AR="[\\u0621-\\u064A]";
+function rx(word){
+  const w=word.replace(/[ً-ٰٟـ]/g,"");
+  const body=[...w].map(c=>{
+    if("اأإآ".includes(c))return "[اأإآ]";
+    if("ةه".includes(c))return "[ةه]";
+    if("يى".includes(c))return "[يى]";
+    if(c===" ")return "\\s+";
+    return c.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  }).join("[\\u064B-\\u065F\\u0670\\u0640]*");
+  return body+"[\\u064B-\\u065F\\u0670\\u0640]*";
+}
+// glossary keyword index, longest first
+const GK=[];GL.forEach((g,i)=>g[3].forEach(k=>GK.push([k,i])));GK.sort((a,b)=>b[0].length-a[0].length);
+const GRX=new RegExp("(?<!"+AR+")(?:[وبلف]?)("+GK.map(k=>rx(k[0])).join("|")+")(?!"+AR+")","g");
+const GMAP=GK.map(k=>[new RegExp("^"+rx(k[0])+"$"),k[1]]);
+const gIndex=m=>{for(const [r,i] of GMAP)if(r.test(m))return i;return -1};
+
+function walkText(root,fn){
+  const tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentNode.closest(".term,mark,.art")?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  const nodes=[];while(tw.nextNode())nodes.push(tw.currentNode);nodes.forEach(fn);
+}
+function linkTerms(el){
+  const used=new Set();
+  walkText(el,node=>{
+    const t=node.nodeValue;GRX.lastIndex=0;let m,last=0,frag=null;
+    while((m=GRX.exec(t))){
+      const i=gIndex(m[1]);if(i<0||used.has(i))continue;used.add(i);
+      frag=frag||document.createDocumentFragment();
+      const s=m.index+m[0].length-m[1].length;
+      frag.append(t.slice(last,s));
+      const b=document.createElement("button");b.className="term";b.dataset.g=i;b.textContent=m[1];b.type="button";frag.append(b);
+      last=s+m[1].length;
+    }
+    if(frag){frag.append(t.slice(last));node.replaceWith(frag)}
+  });
+}
+function markWords(el,ws){
+  if(!ws.length)return;
+  const r=new RegExp("("+ws.map(rx).join("|")+")","g");
+  walkText(el,node=>{
+    const t=node.nodeValue;if(!r.test(t))return;r.lastIndex=0;
+    const frag=document.createDocumentFragment();let last=0,m;
+    while((m=r.exec(t))){if(!m[0])break;frag.append(t.slice(last,m.index));const k=document.createElement("mark");k.textContent=m[0];frag.append(k);last=m.index+m[0].length}
+    frag.append(t.slice(last));node.replaceWith(frag);
+  });
+  el.querySelectorAll(".term").forEach(b=>{if(r.test(b.textContent)){b.innerHTML="<mark>"+b.textContent+"</mark>"}r.lastIndex=0});
+}
+
+const ico=(id,cls)=>`<svg${cls?` class="${cls}"`:""}><use href="#${id}"/></svg>`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function chips(){
+  const tc={},ac={};D.forEach(e=>{tc[e[0]]=(tc[e[0]]||0)+1;ac[e[1]]=(ac[e[1]]||0)+1});
+  $("#types").innerHTML=Object.entries(TYPES).map(([k,t])=>`<button class="chip ty" style="--k:var(${t.c})" data-t="${k}" aria-pressed="${st.type===k}">${ico("i-"+k)}${t.n}<span class="c">${tc[k]||0}</span></button>`).join("");
+  $("#axes").innerHTML=Object.entries(AXES).map(([k,n])=>`<button class="chip" data-a="${k}" aria-pressed="${st.axis===k}">${ico("a-"+k)}${n}<span class="c">${ac[k]||0}</span></button>`).join("");
+}
+function terms(q){return norm(q).split(/[\s،,؟?]+/).map(x=>x.replace(/^ال/,"")).filter(x=>x.length>1&&!STOP.has(x))}
+function render(){
+  const ws=terms(st.q);
+  let rows=D.map((e,i)=>{
+    if(st.type&&e[0]!==st.type)return null;
+    if(st.axis&&e[1]!==st.axis)return null;
+    if(st.ch!==null){const n=artNum(e),c=CH[st.ch];if(n<c[0]||n>c[1])return null}
+    if(!ws.length)return{e,s:0,i};
+    const hay={q:norm(e[2]),a:norm(e[3]),d:norm(e[4]),k:norm(e[6]+" "+AXES[e[1]]+" "+TYPES[e[0]].n+" "+e[5])};
+    let s=0,hit=0;
+    ws.forEach(w=>{const alts=[w,SYN[w]].filter(Boolean);let m=0;
+      alts.forEach(x=>{if(hay.q.includes(x))m=Math.max(m,4);if(hay.k.includes(x))m=Math.max(m,3);if(hay.a.includes(x))m=Math.max(m,2);if(hay.d.includes(x))m=Math.max(m,1)});
+      if(m){hit++;s+=m}});
+    if(!hit)return null;
+    return{e,s:s+hit*5,i};
+  }).filter(Boolean);
+  if(ws.length)rows.sort((a,b)=>b.s-a.s||a.i-b.i);
+  const af=st.ch!==null?` <span class="active-filter">الباب: ${CH[st.ch][2]} <button data-clearch="1" aria-label="إزالة">×</button></span>`:"";
+  $("#count").innerHTML=(rows.length?`${rows.length} نتيجة`:"")+af;
+  const L=$("#list");
+  if(!rows.length){L.innerHTML=`<div class="empty">لا توجد نتيجة بهذه الكلمات. جرّب كلمة أقصر مثل: عدة، حضانة، نفقة، مهر، أو أزل الفلاتر.</div>`;return}
+  L.innerHTML=rows.map(({e})=>{const t=TYPES[e[0]];return `<article class="card" style="--k:var(${t.c})">
+   <div class="badge" title="${t.n}">${ico("i-"+e[0])}</div>
+   <div class="body"><p class="q">${esc(e[2])}</p><p class="a">${esc(e[3])}</p>${e[4]?`<p class="d">${esc(e[4])}</p>`:""}
+   <div class="foot"><button class="art" data-copy="المادة ${esc(e[5])} من قانون الأحوال الشخصية الأردني رقم 15 لسنة 2019" style="background:none;color:var(--k);cursor:pointer;font:inherit;font-size:.78rem;font-weight:600">${/^\d/.test(e[5])?"م ":""}${esc(e[5])}</button><span class="ax">${ico("a-"+e[1])}${AXES[e[1]]}</span></div></div></article>`}).join("");
+  L.querySelectorAll(".body").forEach(b=>{linkTerms(b);markWords(b,ws)});
+}
+function save(){try{localStorage.setItem("ahwal-st",JSON.stringify({type:st.type,axis:st.axis}))}catch(e){}}
+function goGuide(f){Object.assign(st,{type:null,axis:null,ch:null},f);if(!("q" in f)){st.q="";$("#q").value="";$("#clear").hidden=true}chips();render();save();showTab("guide");window.scrollTo({top:0,behavior:"smooth"})}
+
+// ---------- sheet ----------
+let curG=-1;
+function openSheet(i){curG=i;const g=GL[i];$("#shT").textContent=g[0];$("#shD").textContent=g[1]+(g[2]?`  (المادة ${g[2]})`:"");$("#sheet").hidden=false}
+function closeSheet(){$("#sheet").hidden=true}
+$("#shX").onclick=closeSheet;
+$("#shS").onclick=()=>{const g=GL[curG];closeSheet();const q=(g[3][0]||g[0]).replace(/^ال/,"");$("#q").value=q;$("#clear").hidden=false;goGuide({q})};
+$("#shG").onclick=()=>{const g=GL[curG];closeSheet();showTab("gloss");$("#gq").value=g[0];renderGloss();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+
+// ---------- glossary tab ----------
+let gLetter=null;
+const first=s=>{const c=norm(s.replace(/^ال/,"").replace(/^\(/,""))[0];return c};
+function renderGloss(){
+  const q=norm($("#gq").value.trim());
+  const sorted=GL.map((g,i)=>({g,i,k:norm(g[0].replace(/^ال/,""))})).sort((a,b)=>a.k.localeCompare(b.k,"ar"));
+  const letters=[...new Set(sorted.map(x=>x.k[0]))];
+  const all="ابتثجحخدذرزسشصضطظعغفقكلمنهوي".split("");
+  $("#abc").innerHTML=all.map(l=>`<button data-l="${l}" ${letters.includes(l)?"":"disabled"} aria-pressed="${gLetter===l}">${l}</button>`).join("");
+  let list=sorted.filter(x=>(!gLetter||x.k[0]===gLetter)&&(!q||norm(x.g[0]+" "+x.g[1]+" "+x.g[3].join(" ")).includes(q)));
+  let html="",cur="";
+  list.forEach(x=>{if(x.k[0]!==cur){cur=x.k[0];html+=`<div class="letter">${cur}</div>`}
+    html+=`<div class="gl"><h3>${esc(x.g[0])}${x.g[2]?`<small>م ${esc(x.g[2])}</small>`:""}</h3><p>${esc(x.g[1])}</p></div>`});
+  $("#glgrid").innerHTML=html||`<div class="empty" style="grid-column:1/-1">لا يوجد مصطلح بهذا الاسم.</div>`;
+}
+$("#gq").addEventListener("input",()=>{gLetter=null;renderGloss()});
+$("#abc").addEventListener("click",e=>{const b=e.target.closest("button[data-l]");if(!b)return;gLetter=gLetter===b.dataset.l?null:b.dataset.l;renderGloss()});
+
+// ---------- map tab ----------
+function buildMap(){
+  const ac={};D.forEach(e=>ac[e[1]]=(ac[e[1]]||0)+1);
+  // journey
+  $("#journey").innerHTML=JOURNEY.map(([k,n,s],i)=>`<div class="stop"><button class="lab" data-a2="${k}"><span class="step-no">المحطة ${i+1}</span><b>${n}</b><span>${s} · ${ac[k]} معلومة</span></button><button class="node" data-a2="${k}" style="border-color:${AXC[k]};color:${AXC[k]}" aria-label="${n}">${ico("a-"+k)}</button></div>`).join("");
+  // wheel
+  const keys=Object.keys(AXES),tot=D.length,R=150,r=86,cx=160,cy=160;let a0=-Math.PI/2,paths="";
+  keys.forEach(k=>{const a1=a0+(ac[k]||0)/tot*Math.PI*2,g=.012;
+    const p=(ang,rad)=>[cx+rad*Math.cos(ang),cy+rad*Math.sin(ang)].map(v=>v.toFixed(2)).join(" ");
+    const s=a0+g,e=a1-g,large=e-s>Math.PI?1:0;
+    paths+=`<path d="M${p(s,R)} A${R} ${R} 0 ${large} 1 ${p(e,R)} L${p(e,r)} A${r} ${r} 0 ${large} 0 ${p(s,r)}Z" fill="${AXC[k]}" data-a2="${k}"><title>${AXES[k]}: ${ac[k]}</title></path>`;
+    const mid=(a0+a1)/2;paths+=`<g transform="translate(${p(mid,(R+r)/2).replace(" ",",")})" style="pointer-events:none;color:#fff"><svg x="-10" y="-10" width="20" height="20"><use href="#a-${k}"/></svg></g>`;
+    a0=a1});
+  $("#wheel").innerHTML=`<svg viewBox="0 0 320 320" role="img" aria-label="توزيع المعلومات على المحاور">${paths}<text x="160" y="152" text-anchor="middle" style="font:700 40px var(--f-display);fill:var(--ink)">${tot}</text><text x="160" y="180" text-anchor="middle" style="font:500 13px var(--f-body);fill:var(--muted)">معلومة في 11 محورًا</text></svg>`;
+  $("#legend").innerHTML=keys.map(k=>`<button data-a2="${k}"><i style="background:${AXC[k]}"></i>${AXES[k]}<em>${ac[k]}</em></button>`).join("");
+  // matrix
+  const tk=Object.keys(TYPES);const cnt={};let mx=0;D.forEach(e=>{const key=e[1]+e[0];cnt[key]=(cnt[key]||0)+1;mx=Math.max(mx,cnt[key])});
+  $("#matrix").innerHTML=`<thead><tr><th>المحور ↓ / النوع ←</th>${tk.map(t=>`<th style="color:var(${TYPES[t].c})"><svg style="width:18px;height:18px;vertical-align:middle"><use href="#i-${t}"/></svg><br>${TYPES[t].n}</th>`).join("")}</tr></thead><tbody>`+
+    keys.map(k=>`<tr><th style="text-align:right"><span class="ax" style="color:var(--ink);font-size:.88rem">${ico("a-"+k)}${AXES[k]}</span></th>${tk.map(t=>{const n=cnt[k+t]||0;
+      return `<td>${n?`<button class="cell" data-a2="${k}" data-t2="${t}" style="background:color-mix(in srgb,var(${TYPES[t].c}) ${Math.round(12+n/mx*70)}%,var(--surface));color:${n/mx>.45?"var(--surface)":"var(--ink)"}" aria-label="${AXES[k]} – ${TYPES[t].n}: ${n}">${n}</button>`:`<span class="cell z">·</span>`}</td>`}).join("")}</tr>`).join("")+"</tbody>";
+  // wall
+  $("#wall").innerHTML=WALL.map(w=>`<button class="tile" data-q2="${w[3]}" style="--k:var(${w[4]})"><b>${w[0]}</b><small>${w[1]}</small><span>${w[2]}</span></button>`).join("");
+  // ruler
+  const totA=329;
+  $("#ruler").innerHTML=CH.map((c,i)=>`<button data-ch="${i}" style="flex:${c[1]-c[0]+1};background:${CHC[i]}" title="الباب ${i+1}: ${c[2]} (م ${c[0]}–${c[1]})">${i+1}</button>`).join("");
+  const chCount=CH.map(c=>D.filter(e=>{const n=artNum(e);return n>=c[0]&&n<=c[1]}).length);
+  $("#chlist").innerHTML=CH.map((c,i)=>`<button data-ch="${i}"><i style="background:${CHC[i]}">${i+1}</i><span>${c[2]}<small>المواد ${c[0]}–${c[1]} · ${c[1]-c[0]+1} مادة · ${chCount[i]} معلومة</small></span></button>`).join("");
+}
+
+// ---------- events ----------
+document.addEventListener("click",ev=>{
+  const tm=ev.target.closest(".term");if(tm){openSheet(+tm.dataset.g);return}
+  const el=ev.target.closest("button,path");if(!el)return;
+  const ds=el.dataset;
+  if(ds.a2){goGuide({axis:ds.a2,type:ds.t2||null});return}
+  if(ds.q2){$("#q").value=ds.q2;$("#clear").hidden=false;goGuide({q:ds.q2});return}
+  if(ds.ch!==undefined){goGuide({ch:+ds.ch});return}
+  if(ds.clearch){st.ch=null;render();return}
+  if(ds.t){st.type=st.type===ds.t?null:ds.t;chips();render();save()}
+  else if(ds.a){st.axis=st.axis===ds.a?null:ds.a;chips();render();save()}
+  else if(ds.quick){$("#q").value=ds.quick;st.q=ds.quick;st.type=null;st.axis=null;st.ch=null;chips();render();$("#clear").hidden=false;showTab("guide")}
+  else if(ds.tab){showTab(ds.tab)}
+  else if(ds.copy){const t=ds.copy,o=el.textContent;try{navigator.clipboard.writeText(t).then(()=>{el.textContent="نُسخ";setTimeout(()=>el.textContent=o,1200)}).catch(()=>{})}catch(e){}}
+});
+function showTab(k){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.tab===k));
+  ["guide","map","gloss","firqa","irth","idda","about"].forEach(p=>$("#p-"+p).hidden=p!==k)}
+$("#q").addEventListener("input",e=>{st.q=e.target.value;$("#clear").hidden=!st.q;render()});
+$("#clear").addEventListener("click",e=>{e.preventDefault();$("#q").value="";st.q="";$("#clear").hidden=true;render();$("#q").focus()});
+$("#quick").innerHTML=["مدة عدة الوفاة","سن الحضانة","التعويض عن الطلاق التعسفي","شروط الحاضن","المبيت","سن الزواج","الغياب","الوصية الواجبة","زيادة النفقة","تسجيل الطلاق"].map(x=>`<button data-quick="${x}">${x}</button>`).join("");
+$("#firqaRows").innerHTML=FIRQA.map(r=>`<tr><td>${r[0]}</td><td><span class="pill p-${r[4]}">${r[1]}</span></td><td>${r[2]||"—"}</td><td>م ${r[3]}</td></tr>`).join("");
+$("#irthRows").innerHTML=IRTH.map(r=>`<tr><td><b>${r[0]}</b></td><td class="frac">${r[1]}</td><td>${r[2]}</td><td>م ${r[3]}</td></tr>`).join("");
+$("#tline").innerHTML=TL.map(r=>`<div class="tl-row"><span class="tl-name">${r[0]}</span><div class="tl-bar" role="img" aria-label="${r[0]}: ${r[2]}"><div class="tl-fill" style="width:${Math.max(14,Math.min(100,r[1]/24*100))}%">${r[2]}${r[1]>24?" ←":""}</div></div></div>`).join("");
+["firqaRows","irthRows"].forEach(id=>linkTerms($("#"+id)));
+chips();render();buildMap();renderGloss();
+</script>
+
+</body>
+</html>

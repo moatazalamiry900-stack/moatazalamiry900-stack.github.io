@@ -1,0 +1,17 @@
+{
+ "name": "دليل الأحوال الشخصية الأردني",
+ "short_name": "الأحوال الشخصية",
+ "start_url": "index.html",
+ "display": "standalone",
+ "dir": "rtl",
+ "lang": "ar",
+ "background_color": "#f3f6f5",
+ "theme_color": "#0f6b5c",
+ "icons": [
+  {
+   "src": "icon.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  }
+ ]
+}
