@@ -193,6 +193,32 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brass);outline-
 .chlist small{display:block;color:var(--muted);font-size:.75rem}
 .active-filter{display:inline-flex;gap:6px;align-items:center;background:var(--brass-soft);color:var(--brass);border-radius:999px;padding:2px 4px 2px 10px;font-size:.85rem;font-weight:600}
 .active-filter button{all:unset;cursor:pointer;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--surface)}
+/* topic dossier */
+.dossier{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--brass);border-radius:var(--r);padding:16px 18px;display:grid;gap:12px}
+.eyebrow{margin:0;font-size:.75rem;font-weight:700;letter-spacing:.04em;color:var(--brass)}
+.dz-title{font-family:var(--f-display);font-size:clamp(1.6rem,6vw,2.2rem);margin:-6px 0 0;line-height:1.25}
+.dz-def{background:var(--brass-soft);border-radius:10px;padding:10px 14px}
+.dz-def p{margin:4px 0 0;font-size:1rem}
+.dz-def small{color:var(--muted);font-size:.78rem}
+.dz-lbl{display:inline-flex;gap:6px;align-items:center;font-size:.78rem;font-weight:700;color:var(--muted)}
+.dz-lbl svg{width:16px;height:16px}
+.dz-row{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:start}
+.dz-chips{display:flex;flex-wrap:wrap;gap:6px;min-width:0;align-items:center}
+.dz-jump,.dz-term,.dz-art{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.85rem;background:var(--bg)}
+.dz-jump{color:var(--k);border-color:color-mix(in srgb,var(--k) 40%,var(--line))}
+.dz-jump svg{width:16px;height:16px}
+.dz-jump b{background:var(--k);color:var(--surface);border-radius:999px;padding:0 7px;font-size:.75rem}
+.dz-term{color:var(--brass);border-color:color-mix(in srgb,var(--brass) 40%,var(--line))}
+.dz-art{font-variant-numeric:tabular-nums;font-weight:600}
+.dz-jump:hover,.dz-term:hover,.dz-art:hover,.dz-jump:focus-visible,.dz-term:focus-visible,.dz-art:focus-visible{background:var(--accent-soft)}
+.grp{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-size:1.15rem;color:var(--k);margin:14px 0 0;padding-bottom:4px;border-bottom:2px solid color-mix(in srgb,var(--k) 30%,transparent);scroll-margin-top:150px}
+.grp svg{width:22px;height:22px}
+.grp span{font-family:var(--f-body);font-size:.8rem;color:var(--muted)}
+.relbox{margin-top:14px;border:1px dashed var(--line);border-radius:var(--r);padding:10px 12px;scroll-margin-top:150px}
+.relbox summary{cursor:pointer;display:flex;gap:8px;align-items:center;font-weight:700;color:var(--muted)}
+.relbox summary b{background:var(--line);color:var(--ink);border-radius:999px;padding:0 8px;font-size:.78rem}
+.relbox .list{margin-top:10px}
+@media (max-width:480px){.dz-row{grid-template-columns:1fr;gap:4px}}
 @media (max-width:640px){.wheel-wrap{grid-template-columns:1fr}.wheel{max-width:300px;margin:0 auto}}
 @media (max-width:480px){.card{grid-template-columns:36px 1fr;padding:12px}.badge{width:36px;height:36px}.a{font-size:1.12rem}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -370,7 +396,13 @@ const D=[
 ["H","mh","هل تجبر الزوجة على الجهاز من المهر؟","لا، المهر مالها","وللزوج الانتفاع بالجهاز بإذنها ما دامت الزوجية قائمة.","57","جهاز اثاث"],
 ["H","mh","ما الذي تشمله نفقة الزوجة؟","الطعام والكسوة والسكنى والتطبيب","بالقدر المعروف، وخدمة الزوجة التي لأمثالها خدم. وتجب ولو كانت موسرة، من حين العقد الصحيح.","59–60","نفقة الزوجة"],
 ["S","mh","متى تستحق الزوجة العاملة النفقة؟","عمل مشروع + موافقة الزوج","موافقة صريحة أو دلالة، ولا يرجع الزوج عنها إلا لسبب مشروع ودون إضرار بها.","61","موظفة عاملة"],
-["H","mh","ما أثر النشوز؟","لا نفقة للناشز ما لم تكن حاملًا","الناشز هي التي تترك بيت الزوجية بلا مسوغ شرعي. ومن المسوغات إيذاء الزوج أو إساءة العشرة أو عدم أمانها على نفسها أو مالها.","62","ناشز نشوز"],
+["H","mh","ما أثر النشوز؟","لا نفقة للناشز ما لم تكن حاملًا","الناشز هي التي تترك بيت الزوجية بلا مسوغ شرعي، أو تمنع الزوج من الدخول إلى بيتها قبل طلبها النقلة إلى بيت آخر. فإن كانت حاملًا فالنفقة للحمل.","62","ناشز نشوز"],
+["S","mh","متى يكون خروج الزوجة من البيت مشروعًا فلا تعد ناشزًا؟","إيذاء الزوج، إساءة العشرة، أو عدم أمانها على نفسها أو مالها","هذه مسوغات مشروعة لخروجها من المسكن بنص القانون، فلا تسقط نفقتها.","62","نشوز ناشز خروج ترك البيت"],
+["S","mh","متى يحق للزوجة الامتناع عن الانتقال لبيت الزوجية؟","إذا لم يدفع المهر المعجل أو لم يهيئ مسكنًا شرعيًا","إذا طالبها بالنقلة فامتنعت بغير حق شرعي فلا نفقة لها، أما مع هذين السببين فامتناعها بحق.","60","نشوز نقلة امتناع"],
+["H","mh","أثر امتناع الزوجة عن متابعة زوجها","يسقط حقها في النفقة","عليها بعد قبض مهرها المعجل متابعة زوجها إلى أي جهة ولو خارج المملكة، بشرط أن تكون مأمونة عليها وألا يكون في وثيقة العقد شرط بخلاف ذلك.","72","طاعة نشوز سفر متابعة"],
+["H","mh","نفقة الزوجة المسجونة","تسقط من تاريخ سجنها","إذا سُجنت بحكم جزائي قطعي لا يد للزوج فيه.","63","سجن الزوجة"],
+["H","tf","هل الإخلال بالواجبات الزوجية ضرر يجيز التفريق للشقاق؟","نعم، الإصرار على الإخلال بالحقوق والواجبات","يعد ضررًا معنويًا أي تصرف مشين أو مخل بالأخلاق، وكذلك إصرار أحد الزوجين على الإخلال بالواجبات الزوجية، ولكل منهما طلب التفريق.","126","نشوز شقاق ضرر معنوي واجبات"],
+["S","zw","شرط الزوج على زوجته ألا تعمل أو أن تسكن معه في بلد عمله","شرط صحيح وملزم","فإن لم تف به فُسخ النكاح بطلبه وسقط مهرها المؤجل ونفقة عدتها.","37/ب","شرط الزوج عمل"],
 ["T","mh","من متى تُفرض النفقة؟","من تاريخ الطلب (رفع الدعوى)","تسقط نفقة المدة التي سبقت التراضي أو الطلب من القاضي.","64–65","نفقة باثر رجعي"],
 ["T","mh","متى تُسمع دعوى زيادة النفقة أو تخفيضها؟","بعد مضي سنة على الحكم بها","إلا إذا حدثت ظروف استثنائية. ويشمل نفقة الزوجة والأقارب.","202","زيادة النفقة تخفيض"],
 ["H","mh","من يتحمل نفقات الولادة؟","الزوج","أجرة القابلة والطبيب والعلاج والمستشفى بالقدر المعروف، سواء أكانت الزوجية قائمة أم لا.","70","ولادة مستشفى"],
@@ -571,7 +603,7 @@ const GL=[
 ["مهر المثل","مهر امرأة تماثل الزوجة من قريبات أبيها، فإن لم توجد فمن أهل بلدها.","39",["مهر المثل"]],
 ["المهر المعجل والمؤجل","المعجل: ما يُدفع عند العقد أو قبل الزفاف. المؤجل: ما يؤخر إلى أجل أو إلى الطلاق أو الوفاة.","41–42",["المعجل","المؤجل"]],
 ["الموسر والمعسر","الموسر: القادر ماليًا. المعسر: العاجز عن الدفع. والإعسار: حالة العجز.","",["موسرًا","معسرًا","الموسر","الإعسار","اليسار","موسرة"]],
-["النشوز","ترك الزوجة بيت الزوجية دون مسوغ شرعي، فتسقط نفقتها. الناشز: الزوجة في هذه الحالة.","62",["النشوز","الناشز","نشزت"]],
+["النشوز","خروج الزوجة عن طاعة زوجها في الأمور المشروعة. في القانون: الناشز هي التي تترك بيت الزوجية بلا مسوغ شرعي أو تمنع الزوج من دخول بيتها، فتسقط نفقتها.","62",["النشوز","الناشز","نشزت","ناشزا","ناشز","نشوز"]],
 ["النكول عن اليمين","امتناع الخصم عن حلف اليمين التي طلبها القاضي.","121",["نكولها"]],
 ["الوصي","من يعينه الأب أو الجد أو المحكمة لإدارة أموال القاصر.","230",["الوصي","وصي","وصيًا","الوصاية"]],
 ["الوصية الواجبة","نصيب يفرضه القانون لأولاد الابن الذي مات قبل أبيه، بمقدار نصيب أبيهم وفي حدود الثلث.","279",["الوصية الواجبة"]],
@@ -657,8 +689,100 @@ function chips(){
   $("#axes").innerHTML=Object.entries(AXES).map(([k,n])=>`<button class="chip" data-a="${k}" aria-pressed="${st.axis===k}">${ico("a-"+k)}${n}<span class="c">${ac[k]||0}</span></button>`).join("");
 }
 function terms(q){return norm(q).split(/[\s،,؟?]+/).map(x=>x.replace(/^ال/,"")).filter(x=>x.length>1&&!STOP.has(x))}
+// كلمات توسّع كل موضوع رئيسي لعرض المواضيع ذات الصلة
+const TOPIC_EXP=[
+ [["نشوز","ناشز"],["نفقه","مسكن","بيت الزوجيه","متابعه","طاعه","شقاق"]],
+ [["حضان","محضون","حاضن"],["مبيت","رويه","استزاره","ضم","سفر","نفقه الاولاد","اجره"]],
+ [["عده","معتده"],["حيض","حمل","وفاه","رجعه","نفقه العده"]],
+ [["نفقه","انفاق"],["موسر","معسر","مسكن","صندوق","ولاده","تعليم"]],
+ [["مهر"],["معجل","مؤجل","جهاز","خطبه","خلوه"]],
+ [["طلاق","طلق"],["رجعي","بائن","رجعه","خلع","تعسفي","عده","تسجيل"]],
+ [["خلع","افتداء","مخالعه"],["عوض","حضانه","نفقه العده","شقاق"]],
+ [["ارث","ميراث","ورث","تركه"],["فروض","تعصيب","عصبه","وصيه","ارحام","حجب"]],
+ [["وصيه","وصيت"],["ثلث","ورثه","تركه","موصي"]],
+ [["نسب"],["فراش","لعان","حمل","اقرار","تبني"]],
+ [["زواج","عقد"],["ولي","شهود","كفاءه","خطبه","مهر","توثيق"]],
+ [["ولي","ولايه"],["عضل","وصي","قاصر","رشد"]],
+ [["تفريق","فسخ"],["غياب","هجر","حبس","عيوب","شقاق","افتداء","مفقود"]]
+];
+function relatedWords(ws){
+  const out=new Set();
+  ws.forEach(w=>TOPIC_EXP.forEach(([keys,exp])=>{if(keys.some(k=>w.includes(k)||k.includes(w)))exp.forEach(x=>out.add(x))}));
+  ws.forEach(w=>out.delete(w));
+  return [...out];
+}
+function topicOf(ws,q){
+  if(!ws.length)return -1;
+  const nq=norm(q).replace(/^ال/,"");
+  let best=-1,bs=0;
+  GL.forEach((g,i)=>{
+    const keys=[g[0],...g[3]].map(k=>norm(k).replace(/^ال/,"").replace(/[()]/g,""));
+    keys.forEach(k=>{let s=0;
+      if(k===nq)s=10;else if(ws.some(w=>w===k))s=8;else if(ws.some(w=>w.length>2&&(k.startsWith(w)||w.startsWith(k))&&Math.min(k.length,w.length)>=3))s=5;
+      if(s>bs){bs=s;best=i}});
+  });
+  return best;
+}
+const ORDER=[["H","الأحكام والآثار"],["S","الشروط"],["T","المدد والأعمار"],["N","الأعداد"],["V","القيم والمبالغ"]];
+const cardHTML=e=>{const t=TYPES[e[0]];return `<article class="card" style="--k:var(${t.c})">
+   <div class="badge" title="${t.n}">${ico("i-"+e[0])}</div>
+   <div class="body"><p class="q">${esc(e[2])}</p><p class="a">${esc(e[3])}</p>${e[4]?`<p class="d">${esc(e[4])}</p>`:""}
+   <div class="foot"><button class="art" data-copy="المادة ${esc(e[5])} من قانون الأحوال الشخصية الأردني رقم 15 لسنة 2019" style="background:none;color:var(--k);cursor:pointer;font:inherit;font-size:.78rem;font-weight:600">${/^\d/.test(e[5])?"م ":""}${esc(e[5])}</button><span class="ax">${ico("a-"+e[1])}${AXES[e[1]]}</span></div></div></article>`};
+function scoreEntry(e,ws){
+  const hay={q:norm(e[2]),a:norm(e[3]),d:norm(e[4]),k:norm(e[6]+" "+AXES[e[1]]+" "+TYPES[e[0]].n+" "+e[5])};
+  let s=0,hit=0;
+  ws.forEach(w=>{const alts=[w,SYN[w]].filter(Boolean);let m=0;
+    alts.forEach(x=>{if(hay.q.includes(x))m=Math.max(m,4);if(hay.k.includes(x))m=Math.max(m,3);if(hay.a.includes(x))m=Math.max(m,2);if(hay.d.includes(x))m=Math.max(m,1)});
+    if(m){hit++;s+=m}});
+  return hit?s+hit*5:0;
+}
+function passFilters(e){
+  if(st.type&&e[0]!==st.type)return false;
+  if(st.axis&&e[1]!==st.axis)return false;
+  if(st.ch!==null){const n=artNum(e),c=CH[st.ch];if(n<c[0]||n>c[1])return false}
+  return true;
+}
 function render(){
   const ws=terms(st.q);
+  if(ws.length&&!st.type)return renderDossier(ws);
+  return renderFlat(ws);
+}
+function renderDossier(ws){
+  const direct=D.map((e,i)=>({e,i,s:passFilters(e)?scoreEntry(e,ws):0})).filter(x=>x.s).sort((a,b)=>b.s-a.s||a.i-b.i);
+  const ti=topicOf(ws,st.q);
+  const rw=relatedWords(ws);
+  const dset=new Set(direct.map(x=>x.i));
+  const related=rw.length?D.map((e,i)=>({e,i})).filter(x=>!dset.has(x.i)&&passFilters(x.e)&&rw.some(w=>norm(x.e[2]+" "+x.e[6]+" "+x.e[3]).includes(w))):[];
+  const af=st.ch!==null?` <span class="active-filter">الباب: ${CH[st.ch][2]} <button data-clearch="1" aria-label="إزالة">×</button></span>`:"";
+  $("#count").innerHTML=(direct.length?`${direct.length} نتيجة مباشرة`+(related.length?` + ${related.length} ذات صلة`:""):"")+af;
+  const L=$("#list");
+  if(!direct.length&&ti<0&&!related.length){L.innerHTML=`<div class="empty">لا توجد نتيجة بهذه الكلمات. جرّب كلمة أقصر مثل: عدة، حضانة، نفقة، مهر، أو أزل الفلاتر.</div>`;return}
+  // terms appearing in direct results
+  const relTerms=new Map();
+  direct.forEach(({e})=>{const t=e[2]+" "+e[3]+" "+e[4];GRX.lastIndex=0;let m;while((m=GRX.exec(t))){const i=gIndex(m[1]);if(i>=0&&i!==ti)relTerms.set(i,(relTerms.get(i)||0)+1)}});
+  const terms6=[...relTerms.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
+  const arts=[...new Set(direct.flatMap(({e})=>String(e[5]).split(/[،,]\s*/)).filter(a=>/\d/.test(a)))].sort((a,b)=>parseInt(a)-parseInt(b));
+  const axc={};direct.forEach(({e})=>axc[e[1]]=(axc[e[1]]||0)+1);
+  const fq=FIRQA.filter(r=>ws.some(w=>norm(r[0]+" "+r[1]).includes(w)));
+  const groups=ORDER.map(([k,n])=>[k,n,direct.filter(x=>x.e[0]===k)]).filter(g=>g[2].length);
+  const g=ti>=0?GL[ti]:null;
+  let h=`<section class="dossier">
+   <p class="eyebrow">ملف الموضوع</p>
+   <h2 class="dz-title">${g?esc(g[0]):esc(st.q.trim())}</h2>
+   ${g?`<div class="dz-def"><span class="dz-lbl">${ico("i-S")}التعريف</span><p>${esc(g[1])}</p>${g[2]?`<small>المادة ${esc(g[2])}</small>`:""}</div>`:""}
+   ${groups.length?`<div class="dz-row"><span class="dz-lbl">يحتوي</span><div class="dz-chips">${groups.map(([k,n,arr])=>`<button class="dz-jump" data-jump="grp-${k}" style="--k:var(${TYPES[k].c})">${ico("i-"+k)}${n}<b>${arr.length}</b></button>`).join("")}${related.length?`<button class="dz-jump" data-jump="grp-rel" style="--k:var(--muted)">ذات صلة<b>${related.length}</b></button>`:""}</div></div>`:""}
+   ${fq.length?`<div class="dz-row"><span class="dz-lbl">نوع الفرقة</span><div class="dz-chips">${fq.map(r=>`<span class="pill p-${r[4]}">${esc(r[0])}: ${esc(r[1])}</span>`).join("")}</div></div>`:""}
+   ${arts.length?`<div class="dz-row"><span class="dz-lbl">المواد</span><div class="dz-chips">${arts.map(a=>`<button class="dz-art" data-copy="المادة ${esc(a)} من قانون الأحوال الشخصية الأردني رقم 15 لسنة 2019">م ${esc(a)}</button>`).join("")}</div></div>`:""}
+   ${Object.keys(axc).length?`<div class="dz-row"><span class="dz-lbl">المحاور</span><div class="dz-chips">${Object.entries(axc).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<span class="ax" style="color:var(--ink)">${ico("a-"+k)}${AXES[k]} (${n})</span>`).join(" · ")}</div></div>`:""}
+   ${terms6.length?`<div class="dz-row"><span class="dz-lbl">مصطلحات مرتبطة</span><div class="dz-chips">${terms6.map(i=>`<button class="dz-term" data-topic="${esc(GL[i][0].replace(/\s*\(.*\)/,""))}">${esc(GL[i][0])}</button>`).join("")}</div></div>`:""}
+  </section>`;
+  groups.forEach(([k,n,arr])=>{h+=`<h3 class="grp" id="grp-${k}" style="--k:var(${TYPES[k].c})">${ico("i-"+k)}${n}<span>${arr.length}</span></h3>`+arr.map(x=>cardHTML(x.e)).join("")});
+  if(!direct.length&&g)h+=`<div class="empty">لا توجد بطاقات تحتوي هذه الكلمة نصًّا، لكن هذه المواضيع مرتبطة بها.</div>`;
+  if(related.length)h+=`<details class="relbox" id="grp-rel" ${direct.length?"":"open"}><summary><span>مواضيع ذات صلة</span><b>${related.length}</b></summary><div class="list">${related.map(x=>cardHTML(x.e)).join("")}</div></details>`;
+  L.innerHTML=h;
+  L.querySelectorAll(".card .body").forEach(b=>{linkTerms(b);markWords(b,ws)});
+}
+function renderFlat(ws){
   let rows=D.map((e,i)=>{
     if(st.type&&e[0]!==st.type)return null;
     if(st.axis&&e[1]!==st.axis)return null;
@@ -751,6 +875,8 @@ document.addEventListener("click",ev=>{
   if(ds.q2){$("#q").value=ds.q2;$("#clear").hidden=false;goGuide({q:ds.q2});return}
   if(ds.ch!==undefined){goGuide({ch:+ds.ch});return}
   if(ds.clearch){st.ch=null;render();return}
+  if(ds.jump){const t=document.getElementById(ds.jump);if(t){if(t.tagName==="DETAILS")t.open=true;t.scrollIntoView({behavior:"smooth",block:"start"})}return}
+  if(ds.topic){$("#q").value=ds.topic;$("#clear").hidden=false;goGuide({q:ds.topic});return}
   if(ds.t){st.type=st.type===ds.t?null:ds.t;chips();render();save()}
   else if(ds.a){st.axis=st.axis===ds.a?null:ds.a;chips();render();save()}
   else if(ds.quick){$("#q").value=ds.quick;st.q=ds.quick;st.type=null;st.axis=null;st.ch=null;chips();render();$("#clear").hidden=false;showTab("guide")}
