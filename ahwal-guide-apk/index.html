@@ -193,6 +193,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brass);outline-
 .chlist small{display:block;color:var(--muted);font-size:.75rem}
 .active-filter{display:inline-flex;gap:6px;align-items:center;background:var(--brass-soft);color:var(--brass);border-radius:999px;padding:2px 4px 2px 10px;font-size:.85rem;font-weight:600}
 .active-filter button{all:unset;cursor:pointer;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--surface)}
+#filters.below{margin-top:22px;padding-top:6px;border-top:1px dashed var(--line)}
+#filters.below #fhint{color:var(--brass);font-size:.85rem;margin-bottom:0}
 /* topic dossier */
 .dossier{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--brass);border-radius:var(--r);padding:16px 18px;display:grid;gap:12px}
 .eyebrow{margin:0;font-size:.75rem;font-weight:700;letter-spacing:.04em;color:var(--brass)}
@@ -275,11 +277,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brass);outline-
  </div>
 
  <section id="p-guide" class="panel">
-  <p class="label">نوع المعلومة</p>
-  <div class="rail" id="types"></div>
-  <p class="label">المحور</p>
-  <div class="rail" id="axes"></div>
-  <div class="quick" id="quick"></div>
+  <div id="filters">
+   <p class="label" id="fhint" hidden>تضييق النتائج حسب:</p>
+   <p class="label">نوع المعلومة</p>
+   <div class="rail" id="types"></div>
+   <p class="label">المحور</p>
+   <div class="rail" id="axes"></div>
+   <div class="quick" id="quick"></div>
+  </div>
   <div class="meta"><span id="count"></span><span>الكلمة المنقطة تحتها = اضغط لتفسيرها</span></div>
   <div class="list" id="list"></div>
  </section>
@@ -742,7 +747,14 @@ function passFilters(e){
   if(st.ch!==null){const n=artNum(e),c=CH[st.ch];if(n<c[0]||n>c[1])return false}
   return true;
 }
+function placeFilters(){
+  const f=$("#filters"),searching=!!st.q.trim();
+  if(searching&&f.previousElementSibling!==$("#list"))$("#list").after(f);
+  if(!searching&&f.nextElementSibling!==document.querySelector("#p-guide .meta"))document.querySelector("#p-guide .meta").before(f);
+  f.classList.toggle("below",searching);$("#fhint").hidden=!searching;$("#quick").hidden=searching;
+}
 function render(){
+  placeFilters();
   const ws=terms(st.q);
   if(ws.length&&!st.type)return renderDossier(ws);
   return renderFlat(ws);

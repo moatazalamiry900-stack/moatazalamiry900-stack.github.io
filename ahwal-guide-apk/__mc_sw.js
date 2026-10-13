@@ -69,4 +69,4 @@
         return caches.match(u.pathname).then(function (m) { return m || (alt ? caches.match(alt) : null); }).then(function (m) { return m || Response.error(); });
       }));
     });
-  })({"v":"mc-ahwal-guide-apk-mv6nwaem","prefix":"mc-ahwal-guide-apk-","base":"/ahwal-guide-apk/","files":["/ahwal-guide-apk/icon.png","/ahwal-guide-apk/index.html","/ahwal-guide-apk/manifest.json"]});
+  })({"v":"mc-ahwal-guide-apk-mv6o166y","prefix":"mc-ahwal-guide-apk-","base":"/ahwal-guide-apk/","files":["/ahwal-guide-apk/icon.png","/ahwal-guide-apk/index.html","/ahwal-guide-apk/manifest.json"]});
